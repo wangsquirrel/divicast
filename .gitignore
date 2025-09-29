@@ -1,0 +1,8 @@
+.vscode/
+__pycache__
+.mypy_cache
+.devcontainer/
+.github
+.venv/
+.qodo/
+dist/
