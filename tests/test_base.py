@@ -3,7 +3,7 @@ import unittest
 from typing import Literal
 
 from divicast.base.symbol import ValuedMultiton
-from divicast.entities.tiangan import Tiangan
+from divicast.entities.ganzhi import Tiangan
 
 
 class EntityWithNameTest(ValuedMultiton):

@@ -7,10 +7,9 @@ from typing import List, NamedTuple, Optional, Self
 from tyme4py import solar  # type: ignore
 
 from divicast.entities.daemon import Daemon
-from divicast.entities.dizhi import Dizhi
+from divicast.entities.ganzhi import Dizhi, Tiangan
 from divicast.entities.liushen import Liushen
 from divicast.entities.relative import Relative
-from divicast.entities.tiangan import Tiangan
 from divicast.entities.trigram import *
 from divicast.entities.trigram import Trigram
 from divicast.entities.wuxing import Wuxing
@@ -435,7 +434,7 @@ class DivinatorySymbol:
         和时间有关
         """
         # 天乙贵人
-        tianyiguiren = None
+        tianyiguiren = []
         if self.bazi.day.gan.num in [0, 4]:
             tianyiguiren = [
                 Dizhi.from_chinese_name("丑"),

@@ -19,3 +19,6 @@ class Daemon(ValuedMultiton):
     Yangren = (10, "阳刃")
     Zaisha = (11, "灾煞")
     Mouxing = (12, "谋星")
+    Wangshen = (13, "亡神")
+    Tianluodiwang = (14, "天罗地网")
+    GuchenGuasu = (15, "孤辰寡宿")

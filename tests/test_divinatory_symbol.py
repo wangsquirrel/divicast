@@ -7,9 +7,9 @@ from jsonschema import validate
 
 from divicast.entities import liushen
 from divicast.entities.daemon import Daemon
-from divicast.entities.dizhi import Dizhi
+from divicast.entities.ganzhi import Dizhi, Tiangan
 from divicast.entities.relative import Relative
-from divicast.entities.tiangan import Tiangan
+from divicast.entities.trigram import Hexagram, Trigram
 from divicast.entities.wuxing import Wuxing
 from divicast.sixline.divinatory_symbol import DivinatorySymbol
 from divicast.sixline.output import (StandardDivinatorySymbolOutput,
@@ -19,6 +19,14 @@ from divicast.sixline.output import (StandardDivinatorySymbolOutput,
 def expand(d, s):
     for i, e in enumerate(d[s]):
         d[s + str(i)] = e
+
+
+class TestHexagram(unittest.TestCase):
+    def test_liu_chong(self):
+        # 六冲卦
+        self.assertEqual(set(str(x) for x in Hexagram.all() if x.is_liuchong()), set([
+            '乾', '坤', '坎', '离', '震', '艮', '兑', '巽', '大壮', '无妄']))
+        self.assertFalse(Hexagram.H1.is_liuchong())
 
 
 class TestDivinatorySymbol(unittest.TestCase):

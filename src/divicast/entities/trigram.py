@@ -191,3 +191,15 @@ class Hexagram(ValuedMultiton):
         else:
             raise ValueError("无法判断归宫的序号")
         return seq
+
+    def is_liuchong(self) -> bool:
+        """
+        是否为六冲卦
+        """
+        return self.inside_trigram() == self.outside_trigram() or self.chinese_name in ['无妄', '大壮']
+
+    def is_liuhe(self) -> bool:
+        """
+        是否为六合卦
+        """
+        return self.chinese_name in ['否', '困', '旅', '豫', '节', '贲', '复', '泰']

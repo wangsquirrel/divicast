@@ -3,6 +3,7 @@ from __future__ import annotations  # 用于前向引用
 from typing import ClassVar, Dict, Self
 
 from divicast.base.symbol import ValuedMultiton
+from divicast.entities.ganzhi import Dizhi, TwelveZhangsheng
 from divicast.entities.wuxing import (BelongsToWuxing, BelongsToYinYang,
                                       Wuxing, YinYang)
 
@@ -88,6 +89,32 @@ class Tiangan(BelongsToWuxing, BelongsToYinYang, ValuedMultiton):
             )
         else:
             raise ValueError("无法计算对应的十神关系")
+
+    def get_twelve_zhangsheng(self, zhi: Dizhi) -> TwelveZhangsheng:
+        """
+        获取对应的十二长生
+        """
+        CHANGSHENG_START_BRANCH = {
+            0: 11,  # 甲 in 亥
+            1: 6,   # 乙 in 午
+            2: 2,   # 丙 in 寅
+            3: 9,   # 丁 in 酉
+            4: 2,   # 戊 in 寅
+            5: 9,   # 己 in 酉
+            6: 5,   # 庚 in 巳
+            7: 0,   # 辛 in 子
+            8: 8,   # 壬 in 申
+            9: 3,   # 癸 in 卯
+        }
+        start_branch_index = CHANGSHENG_START_BRANCH[self.num]
+        if self.get_yinyang() == YinYang.Yang:
+            # 阳干顺行
+            changsheng_index = (zhi.num - start_branch_index + 12) % 12
+        else:
+            # 阴干逆行
+            changsheng_index = (start_branch_index - zhi.num + 12) % 12
+
+        return TwelveZhangsheng(changsheng_index)
 
 
 Tiangan._WUXING_MAP = {
