@@ -25,3 +25,6 @@ build-backend = "uv_build"
 test = [
     "jsonschema>=4.25.0",
 ]
+
+[tool.black]
+line-length = 120
