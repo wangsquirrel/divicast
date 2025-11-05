@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 from pydantic import BaseModel, Field, validator
 
+from ..entities.wuxing import Wuxing
 from .birth import BirthChart, Gender, ZhuInfo
 
 
@@ -88,6 +89,7 @@ class StandardBirthChartOutput(BaseModel):
     personal_info: PersonalInfo = Field(..., description="个人基本信息")
     natal_chart: NatalChart = Field(..., description="八字命盘（静态信息）")
     luck_cycles: LuckCycles = Field(..., description="大运小运流年（动态信息）")
+    chart_analysis: dict[str, Any] = Field(..., description="五行分析结果")
 
     @validator("personal_info", pre=True)
     def parse_personal_birth(cls, v):
@@ -210,7 +212,7 @@ def to_standard_format(birth_chart: BirthChart) -> StandardBirthChartOutput:
         decade = decade.next(1)
     luck = LuckCycles(start_age=start_age, major_cycles=major_cycles_list)
 
-    return StandardBirthChartOutput(personal_info=personal, natal_chart=natal, luck_cycles=luck)
+    return StandardBirthChartOutput(personal_info=personal, natal_chart=natal, luck_cycles=luck, chart_analysis=birth_chart.chart_analysis)
 
 
 def plain_draw_chart(birth_chart: BirthChart) -> None:

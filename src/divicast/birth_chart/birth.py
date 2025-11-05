@@ -8,6 +8,7 @@ from ..base.symbol import ValuedMultiton
 from ..entities.daemon import Daemon
 from ..entities.ganzhi import (Canggan, Dizhi, Nayin, Shishen, SixtyJiazi,
                                Tiangan, TwelveZhangsheng)
+from ..entities.wuxing import Wuxing
 
 Gender = enums.Gender
 
@@ -37,12 +38,14 @@ class ZhuInfo(object):
 
 
 class BirthChart(object):
+    # 原始信息
+    _birth_solar: datetime.datetime
+    _gender: Gender
 
+    # tyme4py库类型的辅助时间信息
     _bazi: lunar.EightChar
     _solar_time: solar.SolarTime
     _child_limit: eightchar.ChildLimit
-    _birth_solar: datetime.datetime
-    _gender: Gender
 
     # Additional attributes for a complete birth chart can be added here
     kongwang: tuple[Dizhi, Dizhi]
@@ -58,6 +61,9 @@ class BirthChart(object):
     monthzhu: ZhuInfo
     dayzhu: ZhuInfo
     bihourzhu: ZhuInfo
+
+    # 分析信息
+    chart_analysis: dict
 
     def __init__(self, birth_solar: datetime.datetime, gender: Gender) -> None:
         '''命盘初始化，只包括八字，没有完整的盘面信息'''
@@ -77,6 +83,7 @@ class BirthChart(object):
         """创建命盘"""
         bc = cls(dt, gender)
         bc.assemble()
+        bc.analyze()
         return bc
 
     def assemble(self) -> None:
@@ -113,6 +120,111 @@ class BirthChart(object):
 
             zhu.tiangan_relations = ''  # TODO: implement tiangan relations calculation
             zhu.dizhi_relations = ''  # TODO: implement dizhi relations calculation
+
+    def analyze(self) -> None:
+        """分析命盘，填充更多中间信息"""
+
+        # 计算五行分数（四步评分法）
+        # 基础分值
+        BASE_HEAVEN = 12.0
+        BASE_CANGGAN = {
+            "MAIN": 10.0,
+            "MIDDLE": 6.0,
+            "SECONDARY": 3.0,
+        }
+
+        # 收集所有“字”：天干（每柱）和地支藏干
+        symbols: list[dict] = []
+
+        pillars = [self.yearzhu, self.monthzhu, self.dayzhu, self.bihourzhu]
+        pillar_names = ["year", "month", "day", "hour"]
+
+        for p_name, zhu in zip(pillar_names, pillars):
+            # 天干
+            tg = zhu.gan
+            tg_wx = tg.belongs_to_wuxing()
+            symbols.append({
+                "name": tg.chinese_name,
+                "wuxing": tg_wx,
+                "position": "heaven",
+                "pillar": p_name,
+                "base": BASE_HEAVEN,
+                "score": BASE_HEAVEN,
+                "obj": tg,
+            })
+
+            # 地支藏干（本气/中气/余气）
+            for c in zhu.canggan:
+                ctype = c.canggan_type.name
+                base = BASE_CANGGAN.get(ctype, 3.0)
+                cg_wx = c.gan.belongs_to_wuxing()
+                symbols.append({
+                    "name": c.gan.chinese_name,
+                    "wuxing": cg_wx,
+                    "position": f"canggan_{ctype}",
+                    "pillar": p_name,
+                    "base": base,
+                    "score": base,
+                    "obj": c.gan,
+                })
+
+        # 第二步：月令加权（以月支为月令）
+        month_wuxing = self.monthzhu.zhi.belongs_to_wuxing()
+        # 令生者（相）是月令生的五行
+        month_generate = month_wuxing.generate()
+
+        for s in symbols:
+            if s["wuxing"] == month_wuxing:
+                s["score"] *= 2.0
+            elif s["wuxing"] == month_generate:
+                s["score"] *= 1.5
+
+        # 保存基础（不含月令加权）用于生克计算中的“基础分”参照
+        for s in symbols:
+            s["base_ref"] = s["base"]
+
+        # 第三步：生克损益（简化模型）
+        # 遍历有方向性的有序对，按邻近优先（同柱或涉及日主优先）应用影响
+        day_master_obj = self.dayzhu.gan
+
+        for a in symbols:
+            for b in symbols:
+                if a is b:
+                    continue
+
+                # 邻近优先：同柱或涉及日主视为紧贴，否则视为较弱影响
+                adj_multiplier = 1.0 if (
+                    a["pillar"] == b["pillar"] or a["obj"] == day_master_obj or b["obj"] == day_master_obj) else 0.6
+
+                # 生
+                if a["wuxing"].generate() == b["wuxing"]:
+                    # A 生 B：A 减去其基础分的15%，B 加上 A 基础分的30%
+                    delta_a = - (a["base_ref"] * 0.15) * adj_multiplier
+                    delta_b = + (a["base_ref"] * 0.30) * adj_multiplier
+                    a["score"] += delta_a
+                    b["score"] += delta_b
+
+                # 克
+                if a["wuxing"].restrain() == b["wuxing"]:
+                    # A 克 B：A 减去其基础分的20%，B 减去其基础分的50%
+                    delta_a = - (a["base_ref"] * 0.20) * adj_multiplier
+                    delta_b = - (b["base_ref"] * 0.50) * adj_multiplier
+                    a["score"] += delta_a
+                    b["score"] += delta_b
+
+        # 第四步：汇总按五行累加
+        totals: dict[str, float] = {wx.chinese_name: 0.0 for wx in [
+            Wuxing.Wood,
+            Wuxing.Fire,
+            Wuxing.Earth,
+            Wuxing.Metal,
+            Wuxing.Water,
+        ]}
+
+        for s in symbols:
+            totals[s["wuxing"].chinese_name] += s["score"]
+
+        self.chart_analysis = totals
 
 
 def get_daemon(self_gan: Tiangan, self_zhi: Dizhi, other_gan: Tiangan, other_zhi: Dizhi) -> list[Daemon]:
