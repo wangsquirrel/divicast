@@ -1,12 +1,15 @@
 import datetime
-from typing import Type, TypeVar, Self
+from typing import Self, Type, TypeVar
 
-from tyme4py import AbstractTyme, lunar, sixtycycle, solar, eightchar, enums  # type: ignore
+from tyme4py import (AbstractTyme, eightchar, enums, lunar,  # type: ignore
+                     sixtycycle, solar)
 
 from ..base.symbol import ValuedMultiton
 from ..entities.daemon import Daemon
 from ..entities.ganzhi import (Canggan, Dizhi, Nayin, Shishen, SixtyJiazi,
                                Tiangan, TwelveZhangsheng)
+
+Gender = enums.Gender
 
 
 class ZhuInfo(object):
@@ -36,9 +39,10 @@ class ZhuInfo(object):
 class BirthChart(object):
 
     _bazi: lunar.EightChar
+    _solar_time: solar.SolarTime
     _child_limit: eightchar.ChildLimit
     _birth_solar: datetime.datetime
-    _gender: str
+    _gender: Gender
 
     # Additional attributes for a complete birth chart can be added here
     kongwang: tuple[Dizhi, Dizhi]
@@ -47,6 +51,7 @@ class BirthChart(object):
     taiyuan: str  # 胎元
     shengong: str  # 身宫
     minggua: str  # 命卦
+    term: solar.SolarTermDay
 
     # 四柱
     yearzhu: ZhuInfo
@@ -54,27 +59,21 @@ class BirthChart(object):
     dayzhu: ZhuInfo
     bihourzhu: ZhuInfo
 
-    def __init__(self, birth_solar: datetime.datetime, gender: str) -> None:
+    def __init__(self, birth_solar: datetime.datetime, gender: Gender) -> None:
         '''命盘初始化，只包括八字，没有完整的盘面信息'''
         self._birth_solar = birth_solar
         self._gender = gender
-        self._bazi = solar.SolarTime.from_ymd_hms(
+        self._solar_time = solar.SolarTime.from_ymd_hms(
             birth_solar.year, birth_solar.month, birth_solar.day, birth_solar.hour, birth_solar.minute, birth_solar.second
-        ).get_lunar_hour().get_eight_char()
+        )
+        self._bazi = self._solar_time.get_lunar_hour().get_eight_char()
         self._child_limit = eightchar.ChildLimit(
-            solar.SolarTime.from_ymd_hms(
-                birth_solar.year,
-                birth_solar.month,
-                birth_solar.day,
-                birth_solar.hour,
-                birth_solar.minute,
-                birth_solar.second,
-            ),
-            enums.Gender.MAN,
+            self._solar_time,
+            gender
         )
 
     @classmethod
-    def create(cls, dt: datetime.datetime, gender: str) -> Self:
+    def create(cls, dt: datetime.datetime, gender: Gender) -> Self:
         """创建命盘"""
         bc = cls(dt, gender)
         bc.assemble()
@@ -90,7 +89,8 @@ class BirthChart(object):
         self.chinese_zodiac = self.yearzhu.zhi.chinese_zodiac()
         self.sign = solar.SolarDay.from_ymd(
             self._birth_solar.year, self._birth_solar.month, self._birth_solar.day
-        ).get_constellation()
+        ).get_constellation().get_name()
+        self.term = self._solar_time.get_solar_day().get_term_day()
 
         self.taiyuan = self._bazi.get_fetal_origin().get_name()
         self.shengong = self._bazi.get_body_sign().get_name()
@@ -113,56 +113,6 @@ class BirthChart(object):
 
             zhu.tiangan_relations = ''  # TODO: implement tiangan relations calculation
             zhu.dizhi_relations = ''  # TODO: implement dizhi relations calculation
-
-
-def draw_chart(birth_chart: BirthChart) -> None:
-    """绘制命盘的函数示例"""
-    print(f"出生日期：{birth_chart._birth_solar.strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"性别：{birth_chart._gender}")
-    print("四柱八字:")
-    print(
-        f"年柱: {birth_chart.yearzhu.gan.chinese_name}{birth_chart.yearzhu.zhi.chinese_name}")
-    print(
-        f"月柱: {birth_chart.monthzhu.gan.chinese_name}{birth_chart.monthzhu.zhi.chinese_name}")
-    print(
-        f"日柱: {birth_chart.dayzhu.gan.chinese_name}{birth_chart.dayzhu.zhi.chinese_name}")
-    print(
-        f"时柱: {birth_chart.bihourzhu.gan.chinese_name}{birth_chart.bihourzhu.zhi.chinese_name}")
-    print(f"生肖: {birth_chart.chinese_zodiac}")
-    print(f"星座: {birth_chart.sign}")
-    print(f"胎元: {birth_chart.taiyuan}")
-    print(f"身宫: {birth_chart.shengong}")
-    print(f"空亡: {birth_chart.kongwang[0].chinese_name}, {birth_chart.kongwang[1].chinese_name}")
-    print("\n详细信息:")
-    for zhu, name in zip([birth_chart.yearzhu, birth_chart.monthzhu, birth_chart.dayzhu, birth_chart.bihourzhu],
-                         ["年柱", "月柱", "日柱", "时柱"]):
-        print(f"{name}:")
-        print(
-            f"  藏干: {', '.join([canggan.gan.chinese_name for canggan in zhu.canggan])}")
-        print(f"  主星: {zhu.zhuxing.chinese_name}")
-        print(
-            f"  副星: {', '.join([fuxing.chinese_name for fuxing in zhu.fuxing])}")
-        print(f"  纳音: {zhu.nayin.chinese_name}")
-        print(
-            f"  神煞: {', '.join([shensha.chinese_name for shensha in zhu.shensha])}")
-        print(f"  星运(日主十二长生): {zhu.xingyun.chinese_name}")
-        print(f"  自坐(本柱十二长生): {zhu.zizuo.chinese_name}")
-        print(
-            f"  空亡: {zhu.kongwang[0].chinese_name}, {zhu.kongwang[1].chinese_name}")
-        print()
-    decade_fortune = birth_chart._child_limit.get_start_decade_fortune()
-    for i in range(0, 9):
-        print(
-            f"大运{i} - {decade_fortune.get_sixty_cycle().get_name()}, 年龄: {decade_fortune.get_start_age()} - {decade_fortune.get_end_age()}"
-        )
-        fortune = decade_fortune.get_start_fortune()
-        for j in range(0, 12):
-            print(
-                f"{fortune.get_age()}岁: 小运: {fortune.get_sixty_cycle().get_name()} - 流年: {fortune.get_sixty_cycle_year().get_sixty_cycle().get_name()}"
-            )
-            fortune = fortune.next(1)
-        print("\n")
-        decade_fortune = decade_fortune.next(1)
 
 
 def get_daemon(self_gan: Tiangan, self_zhi: Dizhi, other_gan: Tiangan, other_zhi: Dizhi) -> list[Daemon]:
@@ -342,6 +292,3 @@ def get_daemon(self_gan: Tiangan, self_zhi: Dizhi, other_gan: Tiangan, other_zhi
         if d not in unique_res:
             unique_res.append(d)
     return unique_res
-
-
-draw_chart(BirthChart.create(datetime.datetime(2025, 10, 10, 15, 39), "男"))

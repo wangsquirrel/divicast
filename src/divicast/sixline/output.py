@@ -299,14 +299,10 @@ def to_standard_format(ds: DivinatorySymbol) -> StandardDivinatorySymbolOutput:
                 is_object=data.origin.is_object,
                 is_changed=data.is_changed,
                 fushen=None if data.origin.fushen is None else Fushen(
-                    relative=str(
-                        data.origin.fushen.relative) if data.origin.fushen else None,
-                    gan=str(
-                        data.origin.fushen.gan) if data.origin.fushen else None,
-                    zhi=str(
-                        data.origin.fushen.zhi) if data.origin.fushen else None,
-                    wuxing=str(
-                        data.origin.fushen.wuxing) if data.origin.fushen else None
+                    relative=str(data.origin.fushen.relative),
+                    gan=str(data.origin.fushen.gan),
+                    zhi=str(data.origin.fushen.zhi),
+                    wuxing=str(data.origin.fushen.wuxing)
                 )
             ),
             variant=HexagramYao(
@@ -314,7 +310,8 @@ def to_standard_format(ds: DivinatorySymbol) -> StandardDivinatorySymbolOutput:
                 gan=str(data.variant.gan),
                 zhi=str(data.variant.zhi),
                 wuxing=str(data.variant.wuxing),
-                line=str(data.variant.line)
+                line=str(data.variant.line),
+                is_subject=None, is_object=None, is_changed=None, fushen=None
             )
         )
 
