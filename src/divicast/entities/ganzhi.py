@@ -4,7 +4,7 @@ from enum import Enum
 from typing import ClassVar, Dict, List, Self
 
 from divicast.base.symbol import ValuedMultiton
-from divicast.entities.wuxing import *
+from divicast.entities.wuxing import Wuxing, YinYang
 
 
 class Shishen(ValuedMultiton):
@@ -24,11 +24,10 @@ class Shishen(ValuedMultiton):
     ZhengYin = (9, "正印")
 
 
-class Tiangan(BelongsToWuxing, BelongsToYinYang, ValuedMultiton):
+class Tiangan(ValuedMultiton):
     """
     天干
     """
-    _WUXING_MAP: ClassVar[Dict[Tiangan, Wuxing]]
 
     Jia = (0, "甲")
     Yi = (1, "乙")
@@ -41,49 +40,43 @@ class Tiangan(BelongsToWuxing, BelongsToYinYang, ValuedMultiton):
     Ren = (8, "壬")
     Gui = (9, "癸")
 
-    def belongs_to_yinyang(self) -> YinYang:
-        """
-        获取天干所属的阴阳
-        """
-        return YinYang((self.num+1) % 2)
-
     def get_shishen(self, other: Self) -> Shishen:
         """
         获取对应的十神
         """
-        if self.belongs_to_wuxing() == other.belongs_to_wuxing():
+        if self.belongs_to(Wuxing) == other.belongs_to(Wuxing):
             # 同五行
             return (
                 Shishen.BiJian
-                if self.belongs_to_yinyang() == other.belongs_to_yinyang()
+                if self.belongs_to(YinYang) == other.belongs_to(YinYang)
                 else Shishen.JieCai  # type: ignore
             )
-        elif self.belongs_to_wuxing().generate() == other.belongs_to_wuxing():
+        elif self.belongs_to(Wuxing).generate() == other.belongs_to(Wuxing):
             # 我生对方
             return (
                 Shishen.ShiShen
-                if self.belongs_to_yinyang() == other.belongs_to_yinyang()
+                if self.belongs_to(YinYang) == other.belongs_to(YinYang)
                 else Shishen.ShangGuan  # type: ignore
             )
-        elif self.belongs_to_wuxing().restrain() == other.belongs_to_wuxing():
+        elif self.belongs_to(Wuxing).restrain() == other.belongs_to(Wuxing):
             # 我克对方
             return (
                 Shishen.PianCai
-                if self.belongs_to_yinyang() == other.belongs_to_yinyang()
+                if self.belongs_to(YinYang) == other.belongs_to(YinYang)
                 else Shishen.ZhengCai  # type: ignore
             )
-        elif self.belongs_to_wuxing() == other.belongs_to_wuxing().restrain():
+        elif self.belongs_to(Wuxing) == other.belongs_to(Wuxing).restrain():
             # 对方克我
             return (
                 Shishen.QiSha
-                if self.belongs_to_yinyang() == other.belongs_to_yinyang()
+                if self.belongs_to(YinYang) == other.belongs_to(YinYang)
                 else Shishen.ZhengGuan  # type: ignore
             )
-        elif self.belongs_to_wuxing() == other.belongs_to_wuxing().generate():
+        elif self.belongs_to(Wuxing) == other.belongs_to(Wuxing).generate():
             # 对方生我
             return (
                 Shishen.PianYin
-                if self.belongs_to_yinyang() == other.belongs_to_yinyang()
+                if self.belongs_to(YinYang) == other.belongs_to(YinYang)
                 else Shishen.ZhengYin  # type: ignore
             )
         else:
@@ -95,18 +88,18 @@ class Tiangan(BelongsToWuxing, BelongsToYinYang, ValuedMultiton):
         """
         CHANGSHENG_START_BRANCH = {
             0: 11,  # 甲 in 亥
-            1: 6,   # 乙 in 午
-            2: 2,   # 丙 in 寅
-            3: 9,   # 丁 in 酉
-            4: 2,   # 戊 in 寅
-            5: 9,   # 己 in 酉
-            6: 5,   # 庚 in 巳
-            7: 0,   # 辛 in 子
-            8: 8,   # 壬 in 申
-            9: 3,   # 癸 in 卯
+            1: 6,  # 乙 in 午
+            2: 2,  # 丙 in 寅
+            3: 9,  # 丁 in 酉
+            4: 2,  # 戊 in 寅
+            5: 9,  # 己 in 酉
+            6: 5,  # 庚 in 巳
+            7: 0,  # 辛 in 子
+            8: 8,  # 壬 in 申
+            9: 3,  # 癸 in 卯
         }
         start_branch_index = CHANGSHENG_START_BRANCH[self.num]
-        if self.belongs_to_yinyang() == YinYang.Yang:
+        if self.belongs_to(YinYang) == YinYang.Yang:
             # 阳干顺行
             changsheng_index = (zhi.num - start_branch_index + 12) % 12
         else:
@@ -116,25 +109,29 @@ class Tiangan(BelongsToWuxing, BelongsToYinYang, ValuedMultiton):
         return TwelveZhangsheng(changsheng_index)
 
 
-Tiangan._WUXING_MAP = {
-    Tiangan.Jia: Wuxing.Wood,
-    Tiangan.Yi: Wuxing.Wood,
-    Tiangan.Bing: Wuxing.Fire,
-    Tiangan.Ding: Wuxing.Fire,
-    Tiangan.Wu: Wuxing.Earth,
-    Tiangan.Ji: Wuxing.Earth,
-    Tiangan.Geng: Wuxing.Metal,
-    Tiangan.Xin: Wuxing.Metal,
-    Tiangan.Ren: Wuxing.Water,
-    Tiangan.Gui: Wuxing.Water,
+Tiangan._BELONGS_TO = {
+    Wuxing: {
+        Tiangan.Jia: Wuxing.Wood,
+        Tiangan.Yi: Wuxing.Wood,
+        Tiangan.Bing: Wuxing.Fire,
+        Tiangan.Ding: Wuxing.Fire,
+        Tiangan.Wu: Wuxing.Earth,
+        Tiangan.Ji: Wuxing.Earth,
+        Tiangan.Geng: Wuxing.Metal,
+        Tiangan.Xin: Wuxing.Metal,
+        Tiangan.Ren: Wuxing.Water,
+        Tiangan.Gui: Wuxing.Water,
+    },
+    YinYang: lambda x: YinYang((x.num + 1) % 2),
 }
 
 
 class CangganType(Enum):
-    '''地支藏干类型'''
-    MAIN = 'main'  # 本气
-    SECONDARY = 'secondary'  # 余气
-    MIDDLE = 'middle'  # 中气
+    """地支藏干类型"""
+
+    MAIN = "main"  # 本气
+    SECONDARY = "secondary"  # 余气
+    MIDDLE = "middle"  # 中气
 
 
 class TwelveZhangsheng(ValuedMultiton):
@@ -157,7 +154,8 @@ class TwelveZhangsheng(ValuedMultiton):
 
 
 class Canggan:
-    '''地支藏干'''
+    """地支藏干"""
+
     gan: Tiangan  # 干
     canggan_type: CangganType  # 藏干类型
 
@@ -171,12 +169,10 @@ class Canggan:
         return self.gan == other.gan and self.canggan_type == other.canggan_type
 
 
-class Dizhi(BelongsToYinYang, BelongsToWuxing, ValuedMultiton):
+class Dizhi(ValuedMultiton):
     """
     地支
     """
-
-    _WUXING_MAP: Dict['Dizhi', 'Wuxing']
 
     Zi = (0, "子")
     Chou = (1, "丑")
@@ -207,22 +203,19 @@ class Dizhi(BelongsToYinYang, BelongsToWuxing, ValuedMultiton):
         """返回相合的地支"""
         return Dizhi((13 - self.num) % 12)
 
-    def belongs_to_yinyang(self) -> YinYang:
-        return YinYang((self.num+1) % 2)
-
     def generate(self) -> List[Dizhi]:
         r = []
-        w = self.belongs_to_wuxing().generate()
+        w = self.belongs_to(Wuxing).generate()
         for d in self.all():
-            if d.belongs_to_wuxing() == w:
+            if d.belongs_to(Wuxing) == w:
                 r.append(d)
         return r
 
     def restrain(self) -> List[Dizhi]:
         r = []
-        w = self.belongs_to_wuxing().restrain()
+        w = self.belongs_to(Wuxing).restrain()
         for d in self.all():
-            if d.belongs_to_wuxing() == w:
+            if d.belongs_to(Wuxing) == w:
                 r.append(d)
         return r
 
@@ -240,46 +233,77 @@ class Dizhi(BelongsToYinYang, BelongsToWuxing, ValuedMultiton):
             "猴",  # 申
             "鸡",  # 酉
             "狗",  # 戌
-            "猪"   # 亥
+            "猪",  # 亥
         ]
         return zodiacs[self.num]
 
     def canggan(self) -> List[Canggan]:
-        '''地址藏干'''
+        """地址藏干"""
         canggan_map: dict[Dizhi, List[Canggan]] = {
             Dizhi.Zi: [Canggan(Tiangan.Gui, CangganType.MAIN)],
-            Dizhi.Chou: [Canggan(Tiangan.Ji, CangganType.MAIN), Canggan(Tiangan.Xin, CangganType.MIDDLE), Canggan(Tiangan.Gui, CangganType.SECONDARY)],
-            Dizhi.Yin: [Canggan(Tiangan.Jia, CangganType.MAIN), Canggan(Tiangan.Bing, CangganType.MIDDLE), Canggan(Tiangan.Wu, CangganType.SECONDARY)],
+            Dizhi.Chou: [
+                Canggan(Tiangan.Ji, CangganType.MAIN),
+                Canggan(Tiangan.Xin, CangganType.MIDDLE),
+                Canggan(Tiangan.Gui, CangganType.SECONDARY),
+            ],
+            Dizhi.Yin: [
+                Canggan(Tiangan.Jia, CangganType.MAIN),
+                Canggan(Tiangan.Bing, CangganType.MIDDLE),
+                Canggan(Tiangan.Wu, CangganType.SECONDARY),
+            ],
             Dizhi.Mou: [Canggan(Tiangan.Yi, CangganType.MAIN)],
-            Dizhi.Chen: [Canggan(Tiangan.Wu, CangganType.MAIN), Canggan(Tiangan.Gui, CangganType.MIDDLE), Canggan(Tiangan.Yi, CangganType.SECONDARY)],
-            Dizhi.Si: [Canggan(Tiangan.Bing, CangganType.MAIN), Canggan(Tiangan.Geng, CangganType.MIDDLE), Canggan(Tiangan.Wu, CangganType.SECONDARY)],
+            Dizhi.Chen: [
+                Canggan(Tiangan.Wu, CangganType.MAIN),
+                Canggan(Tiangan.Gui, CangganType.MIDDLE),
+                Canggan(Tiangan.Yi, CangganType.SECONDARY),
+            ],
+            Dizhi.Si: [
+                Canggan(Tiangan.Bing, CangganType.MAIN),
+                Canggan(Tiangan.Geng, CangganType.MIDDLE),
+                Canggan(Tiangan.Wu, CangganType.SECONDARY),
+            ],
             Dizhi.Wu: [Canggan(Tiangan.Ding, CangganType.MAIN), Canggan(Tiangan.Ji, CangganType.MIDDLE)],
-            Dizhi.Wei: [Canggan(Tiangan.Ji, CangganType.MAIN), Canggan(Tiangan.Yi, CangganType.MIDDLE), Canggan(Tiangan.Ding, CangganType.SECONDARY)],
-            Dizhi.Shen: [Canggan(Tiangan.Geng, CangganType.MAIN), Canggan(Tiangan.Ren, CangganType.MIDDLE), Canggan(Tiangan.Wu, CangganType.SECONDARY)],
+            Dizhi.Wei: [
+                Canggan(Tiangan.Ji, CangganType.MAIN),
+                Canggan(Tiangan.Yi, CangganType.MIDDLE),
+                Canggan(Tiangan.Ding, CangganType.SECONDARY),
+            ],
+            Dizhi.Shen: [
+                Canggan(Tiangan.Geng, CangganType.MAIN),
+                Canggan(Tiangan.Ren, CangganType.MIDDLE),
+                Canggan(Tiangan.Wu, CangganType.SECONDARY),
+            ],
             Dizhi.You: [Canggan(Tiangan.Xin, CangganType.MAIN)],
-            Dizhi.Xu: [Canggan(Tiangan.Wu, CangganType.MAIN), Canggan(Tiangan.Ding, CangganType.MIDDLE), Canggan(Tiangan.Xin, CangganType.SECONDARY)],
+            Dizhi.Xu: [
+                Canggan(Tiangan.Wu, CangganType.MAIN),
+                Canggan(Tiangan.Ding, CangganType.MIDDLE),
+                Canggan(Tiangan.Xin, CangganType.SECONDARY),
+            ],
             Dizhi.Hai: [Canggan(Tiangan.Ren, CangganType.MAIN), Canggan(Tiangan.Jia, CangganType.MIDDLE)],
         }
         return canggan_map[self]
 
 
-Dizhi._WUXING_MAP = {
-    Dizhi.Zi: Wuxing.Water,
-    Dizhi.Chou: Wuxing.Earth,
-    Dizhi.Yin: Wuxing.Wood,
-    Dizhi.Mou: Wuxing.Wood,
-    Dizhi.Chen: Wuxing.Earth,
-    Dizhi.Si: Wuxing.Fire,
-    Dizhi.Wu: Wuxing.Fire,
-    Dizhi.Wei: Wuxing.Earth,
-    Dizhi.Shen: Wuxing.Metal,
-    Dizhi.You: Wuxing.Metal,
-    Dizhi.Xu: Wuxing.Earth,
-    Dizhi.Hai: Wuxing.Water,
+Dizhi._BELONGS_TO = {
+    Wuxing: {
+        Dizhi.Zi: Wuxing.Water,
+        Dizhi.Chou: Wuxing.Earth,
+        Dizhi.Yin: Wuxing.Wood,
+        Dizhi.Mou: Wuxing.Wood,
+        Dizhi.Chen: Wuxing.Earth,
+        Dizhi.Si: Wuxing.Fire,
+        Dizhi.Wu: Wuxing.Fire,
+        Dizhi.Wei: Wuxing.Earth,
+        Dizhi.Shen: Wuxing.Metal,
+        Dizhi.You: Wuxing.Metal,
+        Dizhi.Xu: Wuxing.Earth,
+        Dizhi.Hai: Wuxing.Water,
+    },
+    YinYang: lambda x: YinYang((x.num + 1) % 2),
 }
 
 
-class SixtyJiazi():
+class SixtyJiazi:
     gan: Tiangan
     zhi: Dizhi
 
@@ -288,8 +312,7 @@ class SixtyJiazi():
         self.zhi = zhi
 
     def get_nayin(self) -> Nayin:
-        index = ((6 - ((self.zhi.num - self.gan.num) % 12) // 2) *
-                 10 + self.gan.num) % 60
+        index = ((6 - ((self.zhi.num - self.gan.num) % 12) // 2) * 10 + self.gan.num) % 60
         return Nayin(index // 2)
 
     def get_kongwang(self) -> tuple[Dizhi, Dizhi]:
@@ -303,6 +326,7 @@ class Nayin(ValuedMultiton):
     """
     纳音
     """
+
     HaiZhongJin = (0, "海中金")
     LuZhongHuo = (1, "炉中火")
     DaLinMu = (2, "大林木")
@@ -333,3 +357,39 @@ class Nayin(ValuedMultiton):
     TianShangHuo = (27, "天上火")
     ShiLiuMu = (28, "石榴木")
     DaHaiShui = (29, "大海水")
+
+
+Nayin._BELONGS_TO = {
+    Wuxing: {
+        Nayin.HaiZhongJin: Wuxing.Metal,
+        Nayin.LuZhongHuo: Wuxing.Fire,
+        Nayin.DaLinMu: Wuxing.Wood,
+        Nayin.LuPangTu: Wuxing.Earth,
+        Nayin.JianFengjin: Wuxing.Metal,
+        Nayin.ShanTouHuo: Wuxing.Fire,
+        Nayin.DongXiaShui: Wuxing.Water,
+        Nayin.ChengQiangTu: Wuxing.Earth,
+        Nayin.BaiLajin: Wuxing.Metal,
+        Nayin.YangLiuMu: Wuxing.Wood,
+        Nayin.QuanZhongShui: Wuxing.Water,
+        Nayin.WuShangTu: Wuxing.Earth,
+        Nayin.PiLiHuo: Wuxing.Fire,
+        Nayin.SongBaiMu: Wuxing.Wood,
+        Nayin.ChangLiuShui: Wuxing.Water,
+        Nayin.ShaZhongJin: Wuxing.Metal,
+        Nayin.ShanXiaHuo: Wuxing.Fire,
+        Nayin.PingDiMu: Wuxing.Wood,
+        Nayin.BiShanTu: Wuxing.Earth,
+        Nayin.JinBoJin: Wuxing.Metal,
+        Nayin.FoDengHuo: Wuxing.Fire,
+        Nayin.TianHeShui: Wuxing.Water,
+        Nayin.DaYiTu: Wuxing.Earth,
+        Nayin.ChaiShanJin: Wuxing.Metal,
+        Nayin.SangSongMu: Wuxing.Wood,
+        Nayin.DaXiShui: Wuxing.Water,
+        Nayin.ShaZhongTu: Wuxing.Earth,
+        Nayin.TianShangHuo: Wuxing.Fire,
+        Nayin.ShiLiuMu: Wuxing.Wood,
+        Nayin.DaHaiShui: Wuxing.Water,
+    }
+}

@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import ClassVar, Dict, List
 
 from divicast.base.symbol import ValuedMultiton
-from divicast.entities.wuxing import *
 from divicast.entities.wuxing import Wuxing
 
 
@@ -16,11 +15,10 @@ class Line(ValuedMultiton):
     YangYao = (1, "⚊")
 
 
-class Trigram(BelongsToWuxing, ValuedMultiton):
+class Trigram(ValuedMultiton):
     """
     八卦
     """
-    _WUXING_MAP: ClassVar[Dict[Trigram, Wuxing]]
     _PRIMARY_IMAGE_MAP: ClassVar[Dict[Trigram, str]]
     lines: List[Line]
 
@@ -33,11 +31,10 @@ class Trigram(BelongsToWuxing, ValuedMultiton):
     Xun = (6, "巽")
     Qian = (7, "乾")
 
-    def __init__(self, num: int, chinese_name: str | None = None):
+    def __init__(self, num: int, chinese_name: str):
         """
         :param num: 0-7
-        :param name: 可选, 如果不提供则使用类名
-        :param chinese_name: 可选, 如果不提供则使用类名
+        :param chinese_name: 中文名
         """
         ValuedMultiton.__init__(self, num, chinese_name)
         self.lines = [Line((num >> 0) & 1), Line(
@@ -50,16 +47,17 @@ class Trigram(BelongsToWuxing, ValuedMultiton):
         """
         return self._PRIMARY_IMAGE_MAP[self]
 
-
-Trigram._WUXING_MAP = {
-    Trigram.Qian: Wuxing.Metal,
-    Trigram.Dui: Wuxing.Metal,
-    Trigram.Kan: Wuxing.Water,
-    Trigram.Gen: Wuxing.Earth,
-    Trigram.Li: Wuxing.Fire,
-    Trigram.Xun: Wuxing.Wood,
-    Trigram.Zhen: Wuxing.Wood,
-    Trigram.Kun: Wuxing.Earth,
+Trigram._BELONGS_TO = {
+    Wuxing: {
+        Trigram.Qian: Wuxing.Metal,
+        Trigram.Dui: Wuxing.Metal,
+        Trigram.Kan: Wuxing.Water,
+        Trigram.Gen: Wuxing.Earth,
+        Trigram.Li: Wuxing.Fire,
+        Trigram.Xun: Wuxing.Wood,
+        Trigram.Zhen: Wuxing.Wood,
+        Trigram.Kun: Wuxing.Earth,
+    }
 }
 Trigram._PRIMARY_IMAGE_MAP = {
     Trigram.Qian: '天',

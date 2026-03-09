@@ -67,16 +67,16 @@ class TestTiangan(unittest.TestCase):
             tg2 = tg2.next()
 
     def test_yinyang(self):
-        self.assertEqual(YinYang.Yang, Tiangan.Jia.belongs_to_yinyang())
-        self.assertEqual(YinYang.Yin, Tiangan.Yi.belongs_to_yinyang())
-        self.assertEqual(YinYang.Yang, Tiangan.Bing.belongs_to_yinyang())
-        self.assertEqual(YinYang.Yin, Tiangan.Ding.belongs_to_yinyang())
-        self.assertEqual(YinYang.Yang, Tiangan.Wu.belongs_to_yinyang())
-        self.assertEqual(YinYang.Yin, Tiangan.Ji.belongs_to_yinyang())
-        self.assertEqual(YinYang.Yang, Tiangan.Geng.belongs_to_yinyang())
-        self.assertEqual(YinYang.Yin, Tiangan.Xin.belongs_to_yinyang())
-        self.assertEqual(YinYang.Yang, Tiangan.Ren.belongs_to_yinyang())
-        self.assertEqual(YinYang.Yin, Tiangan.Gui.belongs_to_yinyang())
+        self.assertEqual(YinYang.Yang, Tiangan.Jia.belongs_to(YinYang))
+        self.assertEqual(YinYang.Yin, Tiangan.Yi.belongs_to(YinYang))
+        self.assertEqual(YinYang.Yang, Tiangan.Bing.belongs_to(YinYang))
+        self.assertEqual(YinYang.Yin, Tiangan.Ding.belongs_to(YinYang))
+        self.assertEqual(YinYang.Yang, Tiangan.Wu.belongs_to(YinYang))
+        self.assertEqual(YinYang.Yin, Tiangan.Ji.belongs_to(YinYang))
+        self.assertEqual(YinYang.Yang, Tiangan.Geng.belongs_to(YinYang))
+        self.assertEqual(YinYang.Yin, Tiangan.Xin.belongs_to(YinYang))
+        self.assertEqual(YinYang.Yang, Tiangan.Ren.belongs_to(YinYang))
+        self.assertEqual(YinYang.Yin, Tiangan.Gui.belongs_to(YinYang))
 
     def test_zhangsheng(self):
         self.assertEqual(TwelveZhangsheng.MuYu,

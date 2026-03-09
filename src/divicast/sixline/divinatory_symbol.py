@@ -27,28 +27,26 @@ class Bazi(NamedTuple):
 
 def create_bazi(dt: datetime.datetime) -> Bazi:
     bz = (
-        solar.SolarTime.from_ymd_hms(
-            dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second
-        )
+        solar.SolarTime.from_ymd_hms(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
         .get_lunar_hour()
         .get_eight_char()
     )
 
     year = Ganzhi(
-        Tiangan.from_chinese_name(bz.get_year().get_heaven_stem().get_name()),
-        Dizhi.from_chinese_name(bz.get_year().get_earth_branch().get_name()),
+        Tiangan[bz.get_year().get_heaven_stem().get_name()],
+        Dizhi[bz.get_year().get_earth_branch().get_name()],
     )
     month = Ganzhi(
-        Tiangan.from_chinese_name(bz.get_month().get_heaven_stem().get_name()),
-        Dizhi.from_chinese_name(bz.get_month().get_earth_branch().get_name()),
+        Tiangan[bz.get_month().get_heaven_stem().get_name()],
+        Dizhi[bz.get_month().get_earth_branch().get_name()],
     )
     day = Ganzhi(
-        Tiangan.from_chinese_name(bz.get_day().get_heaven_stem().get_name()),
-        Dizhi.from_chinese_name(bz.get_day().get_earth_branch().get_name()),
+        Tiangan[bz.get_day().get_heaven_stem().get_name()],
+        Dizhi[bz.get_day().get_earth_branch().get_name()],
     )
     bihour = Ganzhi(
-        Tiangan.from_chinese_name(bz.get_hour().get_heaven_stem().get_name()),
-        Dizhi.from_chinese_name(bz.get_hour().get_earth_branch().get_name()),
+        Tiangan[bz.get_hour().get_heaven_stem().get_name()],
+        Dizhi[bz.get_hour().get_earth_branch().get_name()],
     )
     return Bazi(year, month, day, bihour)
 
@@ -252,10 +250,8 @@ class DivinatorySymbol:
         :param bazi: 八字，默认为当前时间的八字
         """
         d = cls()
-        d._time = now or (datetime.datetime.now() +
-                          datetime.timedelta(hours=8))
-        d._cnts = cnts or [bin(random.randrange(0, 8)).count("1")
-                           for _ in range(6)]
+        d._time = now or (datetime.datetime.now() + datetime.timedelta(hours=8))
+        d._cnts = cnts or [bin(random.randrange(0, 8)).count("1") for _ in range(6)]
 
         d.bazi = bazi or create_bazi(d._time)  # 0. 装八字
         d._roll(d._cnts)  # 1. 摇卦
@@ -326,20 +322,12 @@ class DivinatorySymbol:
     def _assemble_tiangan(self):
         # 处理内卦的天干
         for i in range(0, 3):
-            self.lines[i].origin.gan = self._inside_tiangan_dict[
-                self.origin_inside_trigram
-            ]
-            self.lines[i].variant.gan = self._inside_tiangan_dict[
-                self.variant_inside_trigram
-            ]
+            self.lines[i].origin.gan = self._inside_tiangan_dict[self.origin_inside_trigram]
+            self.lines[i].variant.gan = self._inside_tiangan_dict[self.variant_inside_trigram]
         # 处理外卦的天干
         for i in range(3, 6):
-            self.lines[i].origin.gan = self._outside_tiangan_dict[
-                self.origin_outside_trigram
-            ]
-            self.lines[i].variant.gan = self._outside_tiangan_dict[
-                self.variant_outside_trigram
-            ]
+            self.lines[i].origin.gan = self._outside_tiangan_dict[self.origin_outside_trigram]
+            self.lines[i].variant.gan = self._outside_tiangan_dict[self.variant_outside_trigram]
 
     def _assemble_dizhi(self):
         for i in range(0, 3):
@@ -347,13 +335,11 @@ class DivinatorySymbol:
             self.lines[i].variant.zhi = self._dizhi_dict[self.variant_inside_trigram][i]
         for i in range(3, 6):
             self.lines[i].origin.zhi = self._dizhi_dict[self.origin_outside_trigram][i]
-            self.lines[i].variant.zhi = self._dizhi_dict[self.variant_outside_trigram][
-                i
-            ]
+            self.lines[i].variant.zhi = self._dizhi_dict[self.variant_outside_trigram][i]
 
         for i in range(0, 6):
-            self.lines[i].origin.wuxing = self.lines[i].origin.zhi.belongs_to_wuxing()
-            self.lines[i].variant.wuxing = self.lines[i].variant.zhi.belongs_to_wuxing()
+            self.lines[i].origin.wuxing = self.lines[i].origin.zhi.belongs_to(Wuxing)
+            self.lines[i].variant.wuxing = self.lines[i].variant.zhi.belongs_to(Wuxing)
 
     def _assenble_shiying(self):
         """
@@ -390,17 +376,16 @@ class DivinatorySymbol:
 
         for i in range(0, 6):
             self.lines[i].origin.relative = create_relative(
-                self.origin_hexagram.belongs_to_trigram().belongs_to_wuxing(),
+                self.origin_hexagram.belongs_to_trigram().belongs_to(Wuxing),
                 self.lines[i].origin.wuxing,
             )
             # 变卦的六亲要按照变卦各爻的地支和本卦所属卦宫的五行生克关系来装。
             self.lines[i].variant.relative = create_relative(
-                self.origin_hexagram.belongs_to_trigram().belongs_to_wuxing(),
+                self.origin_hexagram.belongs_to_trigram().belongs_to(Wuxing),
                 self.lines[i].variant.wuxing,
             )
 
-        diffs = set(Relative.all()) - \
-            set(l.origin.relative for l in self.lines)
+        diffs = set(Relative.all()) - set(l.origin.relative for l in self.lines)
         if len(diffs) == 0:
             return
 
@@ -437,28 +422,28 @@ class DivinatorySymbol:
         tianyiguiren = []
         if self.bazi.day.gan.num in [0, 4]:
             tianyiguiren = [
-                Dizhi.from_chinese_name("丑"),
-                Dizhi.from_chinese_name("未"),
+                Dizhi["丑"],
+                Dizhi["未"],
             ]
         elif self.bazi.day.gan.num in [1, 5]:
             tianyiguiren = [
-                Dizhi.from_chinese_name("子"),
-                Dizhi.from_chinese_name("申"),
+                Dizhi["子"],
+                Dizhi["申"],
             ]
         elif self.bazi.day.gan.num in [2, 3]:
             tianyiguiren = [
-                Dizhi.from_chinese_name("亥"),
-                Dizhi.from_chinese_name("酉"),
+                Dizhi["亥"],
+                Dizhi["酉"],
             ]
         elif self.bazi.day.gan.num in [6, 7]:
             tianyiguiren = [
-                Dizhi.from_chinese_name("午"),
-                Dizhi.from_chinese_name("寅"),
+                Dizhi["午"],
+                Dizhi["寅"],
             ]
         elif self.bazi.day.gan.num in [8, 9]:
             tianyiguiren = [
-                Dizhi.from_chinese_name("卯"),
-                Dizhi.from_chinese_name("巳"),
+                Dizhi["卯"],
+                Dizhi["巳"],
             ]
         self.daemons[Daemon.Tianyiguiren] = tianyiguiren
 
