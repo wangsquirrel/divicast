@@ -28,6 +28,20 @@
             "description": "起卦时间的干支（四柱）",
             "pattern": "^\\S{2} \\S{2} \\S{2} \\S{2}$"
         },
+        "yuejian": {
+            "type": "string",
+            "description": "月建",
+            "pattern": "^\\S{1}$"
+        },
+        "richen": {
+            "type": "string",
+            "description": "日辰",
+            "pattern": "^\\S{1}$"
+        },
+        "guagong": {
+            "type": "string",
+            "description": "卦宫"
+        },
         "kongwang": {
             "type": "string",
             "description": "日柱对应的旬中空亡",
@@ -83,9 +97,25 @@
             "type": "string",
             "description": "本卦（原始卦象）的卦名"
         },
+        "bengua_type": {
+            "type": "array",
+            "description": "本卦的特殊类型列表",
+            "items": {
+                "type": "string",
+                "description": "特殊类型名称，如 '六合卦'、'六冲卦'、'游魂卦'、'归魂卦'"
+            }
+        },
         "bianguaming": {
             "type": "string",
             "description": "变卦（之卦）的卦名"
+        },
+        "biangua_type": {
+            "type": "array",
+            "description": "变卦的特殊类型列表",
+            "items": {
+                "type": "string",
+                "description": "特殊类型名称，如 '六合卦'、'六冲卦'、'游魂卦'、'归魂卦'"
+            }
         },
         "yao_1": {
             "$ref": "#/definitions/yao",

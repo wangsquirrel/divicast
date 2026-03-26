@@ -7,6 +7,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from divicast.entities.trigram import Hexagram
 from divicast.sixline.divinatory_symbol import DivinatorySymbol
 
 
@@ -63,13 +64,18 @@ class StandardDivinatorySymbolOutput(BaseModel):
     )
     time: str = Field(description="起卦的详细时间，格式：YYYY-MM-DD HH:MM:SS")
     bazi: str = Field(description="起卦时间的干支（四柱）")
+    yuejian: str = Field(description="月建，月柱的地支")
+    richen: str = Field(description="日辰, 日柱的地支")
     kongwang: str = Field(description="日柱对应的旬中空亡")
     guashen: str = Field(description="卦身")
     chuangzhang: List[str] = Field(description="床帐")
     xianggui: List[str] = Field(description="香闺")
     shensha: List[ShenSha] = Field(description="卦象中的神煞信息数组")
     benguaming: str = Field(description="本卦卦名")
+    guagong: str = Field(description="本卦所属的卦宫")
+    bengua_type: list[str] = Field(description="本卦的特殊类型")
     bianguaming: str = Field(description="变卦（之卦）的卦名")
+    biangua_type: list[str] = Field(description="变卦的特殊类型")
     yao_1: YaoDetail = Field(description="初爻（最下爻）详细信息")
     yao_2: YaoDetail = Field(description="二爻详细信息")
     yao_3: YaoDetail = Field(description="三爻详细信息")
@@ -293,14 +299,10 @@ def to_standard_format(ds: DivinatorySymbol) -> StandardDivinatorySymbolOutput:
                 is_object=data.origin.is_object,
                 is_changed=data.is_changed,
                 fushen=None if data.origin.fushen is None else Fushen(
-                    relative=str(
-                        data.origin.fushen.relative) if data.origin.fushen else None,
-                    gan=str(
-                        data.origin.fushen.gan) if data.origin.fushen else None,
-                    zhi=str(
-                        data.origin.fushen.zhi) if data.origin.fushen else None,
-                    wuxing=str(
-                        data.origin.fushen.wuxing) if data.origin.fushen else None
+                    relative=str(data.origin.fushen.relative),
+                    gan=str(data.origin.fushen.gan),
+                    zhi=str(data.origin.fushen.zhi),
+                    wuxing=str(data.origin.fushen.wuxing)
                 )
             ),
             variant=HexagramYao(
@@ -308,13 +310,30 @@ def to_standard_format(ds: DivinatorySymbol) -> StandardDivinatorySymbolOutput:
                 gan=str(data.variant.gan),
                 zhi=str(data.variant.zhi),
                 wuxing=str(data.variant.wuxing),
-                line=str(data.variant.line)
+                line=str(data.variant.line),
+                is_subject=None, is_object=None, is_changed=None, fushen=None
             )
         )
+
+    def hex_special_types(hex: Hexagram) -> list[str]:
+        types = []
+        if hex.is_liuhe():
+            types.append("六合卦")
+        if hex.is_liuchong():
+            types.append("六冲卦")
+        if hex.belongs_to_trigram_seq() == 7:
+            types.append("游魂卦")
+        if hex.belongs_to_trigram_seq() == 8:
+            types.append("归魂卦")
+        return types
+
     sds = StandardDivinatorySymbolOutput(
         yaogua=ds._cnts,
         time=ds._time.strftime("%Y-%m-%d %H:%M:%S"),
         bazi=str(ds.bazi),
+        yuejian=str(ds.bazi.month.zhi),
+        richen=str(ds.bazi.day.zhi),
+
         kongwang=str(ds.kongwang[0]) + str(ds.kongwang[1]),
         guashen=str(ds.guashen),
         chuangzhang=[str(x) for x in ds.chuangzhang],
@@ -323,7 +342,10 @@ def to_standard_format(ds: DivinatorySymbol) -> StandardDivinatorySymbolOutput:
                  for x, y in ds.daemons.items()],
 
         benguaming=str(ds.origin_hexagram),
+        guagong=str(ds.origin_hexagram.belongs_to_trigram()),
+        bengua_type=hex_special_types(ds.origin_hexagram),
         bianguaming=str(ds.variant_hexagram),
+        biangua_type=hex_special_types(ds.variant_hexagram),
         **yao_objects
     )
     return sds
