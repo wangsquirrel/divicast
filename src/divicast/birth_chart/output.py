@@ -1,28 +1,27 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 from pydantic import BaseModel, Field, validator
 from tyme4py import sixtycycle, solar
 
+from divicast.birth_chart.analysis_models import ChartAnalysis as InternalChartAnalysis
+from divicast.time_utils import check_naive_datetime
+
 from ..entities.ganzhi import Tiangan
 from ..entities.wuxing import Wuxing, YinYang
-from .analysis import Strength
-from .birth import BirthChart, Gender, ZhuInfo
-from .geju import Geju
+from .birth import BirthChart, ZhuInfo
 
 
 class PersonalInfo(BaseModel):
     gregorian_birth: datetime = Field(..., description="公历出生时间")
     lunar_birth: Optional[str] = Field(None, description="农历出生日期")
-    true_solar_birth: Optional[str] = Field(None, description="真太阳时（若可得）")
     gender: str = Field(..., description="性别，男/女")
     zodiac: str = Field(..., description="生肖")
     constellation: str = Field(..., description="星座")
     birth_term: str = Field(..., description="出生节气")
     birth_term_time: Optional[str] = Field(None, description="节气交节时间")
-    timezone: Optional[str] = Field(None, description="时区信息")
 
 
 class HiddenStem(BaseModel):
@@ -30,14 +29,14 @@ class HiddenStem(BaseModel):
     element: str = Field(..., description="藏干五行")
     yinYang: str = Field(..., description="阴阳")
     role: str = Field(..., description="本气/中气/余气")
-    tenGod: str = Field(..., description="十神(副星)")
+    tengod: str = Field(..., description="十神(副星)")
 
 
 class HeavenStem(BaseModel):
     name: str = Field(..., description="天干名称")
     element: str = Field(..., description="五行")
     yinYang: str = Field(..., description="阴阳")
-    tenGod: str = Field(..., description="十神(主星)")
+    tengod: str = Field(..., description="十神(主星)")
 
 
 class EarthBranch(BaseModel):
@@ -57,8 +56,6 @@ class Pillar(BaseModel):
     forDayMastertwelveLifeStages: Optional[str] = Field(None, description="星运（日主十二长生）")
     forPillarStemtwelveLifeStages: Optional[str] = Field(None, description="自坐(本柱十二长生)")
     kongwang: str = Field(..., description="柱的空亡")
-    tiangan_relations: Optional[str] = Field(None, description="天干关系")
-    dizhi_relations: Optional[str] = Field(None, description="地支关系")
 
 
 class FourPillars(BaseModel):
@@ -78,14 +75,9 @@ class NatalChart(BaseModel):
     life_pillar: Optional[str] = Field(None, description="命宫")
     life_trigram: Optional[str] = Field(None, description="命卦")
     kongwang: str = Field(..., description="空亡")
-    shensha: List[str] = Field(default_factory=list, description="全盘神煞")
-    element_scores: dict = Field(..., description="五行分数")
-    day_master_strength: Optional[Strength] = Field(None, description="身强/身弱")
-    favorable_elements: List[str] = Field(default_factory=list, description="喜用神对应五行")
-    unfavorable_elements: List[str] = Field(default_factory=list, description="忌神对应五行")
-    useful_element: Optional[str] = Field(None, description="用神")
-    taboo_element: Optional[str] = Field(None, description="忌神")
-    geju: Optional[Geju] = Field(None, description="命盘格局")
+    shensha: List[str] = Field(
+        default_factory=list, description="全盘神煞，所有柱位中神煞的汇总。位置可以在具体柱位查看”"
+    )
     calc_rules: dict[str, str] = Field(default_factory=dict, description="计算流派/口径")
     four_pillars: FourPillars = Field(..., description="四柱信息")
 
@@ -150,21 +142,108 @@ class FlowMonth(BaseModel):
     month_yinyang: Optional[str] = Field(None, description="流月天干阴阳")
 
 
-class RelationItem(BaseModel):
-    target: str = Field(..., description="对应柱位")
-    relation: str = Field(..., description="关系类型")
+class RelationParticipant(BaseModel):
+    pillar: str = Field(..., description="参与关系的柱位")
+    position: str = Field(..., description="所在位置，天干或地支")
+    value: str = Field(..., description="对应的天干或地支")
+
+
+class RelationPeer(BaseModel):
+    pillar: str = Field(..., description="其他参与柱位")
+    value: str = Field(..., description="其他参与方的天干或地支")
+
+
+class RelationEvent(BaseModel):
+    name: str = Field(..., description="关系名称，如天干五合、地支三合")
+    relation: str = Field(..., description="关系大类，如合、冲、刑、害、破、会")
+    participants: List[RelationParticipant] = Field(default_factory=list, description="参与关系的柱位明细")
+    result: Optional[str] = Field(None, description="关系结果，如化土、火局")
+    qualifier: Optional[str] = Field(None, description="关系细分说明，如无恩之刑、自刑")
+
+
+class RelationIndexItem(BaseModel):
+    event_index: int = Field(..., description="对应 events 中的索引，从 0 开始")
+    name: str = Field(..., description="关系名称")
+    relation: str = Field(..., description="关系大类")
+    peers: List[RelationPeer] = Field(default_factory=list, description="除当前柱位外的其他参与方")
+    result: Optional[str] = Field(None, description="关系结果，如化土、火局")
+    qualifier: Optional[str] = Field(None, description="关系细分说明，如无恩之刑、自刑")
 
 
 class PillarRelations(BaseModel):
-    stem: List[RelationItem] = Field(default_factory=list, description="天干关系")
-    branch: List[RelationItem] = Field(default_factory=list, description="地支关系")
+    stem: List[RelationIndexItem] = Field(default_factory=list, description="该柱天干参与的关系")
+    branch: List[RelationIndexItem] = Field(default_factory=list, description="该柱地支参与的关系")
+
+
+class RelationByPillar(BaseModel):
+    year: PillarRelations = Field(..., description="年柱参与的关系索引")
+    month: PillarRelations = Field(..., description="月柱参与的关系索引")
+    day: PillarRelations = Field(..., description="日柱参与的关系索引")
+    hour: PillarRelations = Field(..., description="时柱参与的关系索引")
 
 
 class Relations(BaseModel):
-    year: PillarRelations
-    month: PillarRelations
-    day: PillarRelations
-    hour: PillarRelations
+    events: List[RelationEvent] = Field(default_factory=list, description="标准化关系事件列表")
+    by_pillar: RelationByPillar = Field(..., description="按柱位回查的关系索引")
+
+
+class WuxingScoreOutput(BaseModel):
+    count: int = Field(..., description="五行出现次数")
+    score: float = Field(..., description="五行加权分数")
+
+
+class WuxingAnalysisOutput(BaseModel):
+    items: dict[str, WuxingScoreOutput] = Field(..., description="五行数量和加权分数")
+    month_zhi_wuxing: str = Field(..., description="月支五行")
+    strongest: str = Field(..., description="当前加权最旺五行")
+    total_score: float = Field(..., description="五行加权总分")
+
+
+class RootInfoOutput(BaseModel):
+    pillar: str = Field(..., description="通根所在柱位")
+    branch: str = Field(..., description="通根地支")
+    gan: str = Field(..., description="通根天干")
+    role: str = Field(..., description="藏干角色")
+    score: float = Field(..., description="根气加权分数")
+
+
+class StrengthAnalysisOutput(BaseModel):
+    day_master_wuxing: str = Field(..., description="日主五行")
+    month_ling_shishen_family: str = Field(..., description="月令所属十神家族")
+    support_score: float = Field(..., description="扶助加权分")
+    opposition_score: float = Field(..., description="克泄耗加权分")
+    support_ratio: float = Field(..., description="扶助加权占比")
+    day_master_has_root: bool = Field(..., description="日主是否通根")
+    day_master_root_count: int = Field(..., description="通根数量")
+    day_master_root_score: float = Field(..., description="通根加权总分")
+    day_master_roots: List[RootInfoOutput] = Field(default_factory=list, description="通根明细")
+    day_master_strength: Optional[str] = Field(None, description="日主强弱估计")
+
+
+class TenGodAnalysisOutput(BaseModel):
+    ten_god_scores: dict[str, float] = Field(..., description="十神分布加权分数")
+    ten_god_family_scores: dict[str, float] = Field(..., description="十神家族分布加权分数")
+
+
+class FavorabilityAnalysisOutput(BaseModel):
+    favorable_elements: List[str] = Field(default_factory=list, description="倾向补益五行（启发式）")
+    unfavorable_elements: List[str] = Field(default_factory=list, description="倾向回避五行（启发式）")
+    useful_element: Optional[str] = Field(None, description="首选补益五行（启发式）")
+    taboo_element: Optional[str] = Field(None, description="首选回避五行（启发式）")
+
+
+class GejuAnalysisOutput(BaseModel):
+    geju: Optional[str] = Field(None, description="候选格局（启发式）")
+    basis: List[str] = Field(default_factory=list, description="候选格局判断依据")
+
+
+class ChartAnalysisOutput(BaseModel):
+    wuxing: WuxingAnalysisOutput = Field(..., description="五行加权分析")
+    strength: StrengthAnalysisOutput = Field(..., description="旺衰估计")
+    ten_god: TenGodAnalysisOutput = Field(..., description="十神加权分析")
+    favorability: FavorabilityAnalysisOutput = Field(..., description="喜忌倾向分析")
+    geju: GejuAnalysisOutput = Field(..., description="格局候选分析")
+    relations: Relations = Field(..., description="干支关系分析")
 
 
 class StandardBirthChartOutput(BaseModel):
@@ -172,8 +251,7 @@ class StandardBirthChartOutput(BaseModel):
     natal_chart: NatalChart = Field(..., description="八字命盘（静态信息）")
     luck_cycles: LuckCycles = Field(..., description="大运小运流年（动态信息）")
     target_flow: TargetFlow = Field(..., description="指定时间的流年月日时")
-    relations: Relations = Field(..., description="刑冲合会（简化）")
-    chart_analysis: dict[str, Any] = Field(..., description="五行分析结果")
+    heuristic_analysis: ChartAnalysisOutput = Field(..., description="盘面启发式分析结果，不作为最终结论，仅供参考")
 
     @validator("personal_info", pre=True)
     def parse_personal_birth(cls, v):
@@ -185,78 +263,60 @@ def to_standard_format(birth_chart: BirthChart, target_dt: datetime) -> Standard
     """
     将 BirthChart 转换为标准化的输出格式
     """
-
-    def _get_chinese_name(obj, default=""):
-        try:
-            return obj.chinese_name
-        except Exception:
-            try:
-                return str(obj)
-            except Exception:
-                return default
-
-    role_map = {
-        # CangganType values: MAIN -> 本气, MIDDLE -> 中气, SECONDARY -> 余气
-        "MAIN": "本气",
-        "MIDDLE": "中气",
-        "SECONDARY": "余气",
-    }
+    target_dt = check_naive_datetime(target_dt)
 
     def zhu_to_pillar(zhu: ZhuInfo) -> Pillar:
 
-        pillar_str = zhu.gan.chinese_name + zhu.zhi.chinese_name
+        pillar_str = f"{zhu.gan}{zhu.zhi}"
         xun = _get_sixty_cycle_ten(pillar_str)
 
         # heaven stem
-        hs_name = zhu.gan.chinese_name
-        hs_element = zhu.gan.belongs_to(Wuxing).chinese_name
-        hs_yinyang = zhu.gan.belongs_to(YinYang).chinese_name
-        hs_ten = zhu.zhuxing.chinese_name
-        heavenly = HeavenStem(name=hs_name, element=hs_element, yinYang=hs_yinyang, tenGod=hs_ten)
+        hs_name = str(zhu.gan)
+        hs_element = str(zhu.gan.belongs_to(Wuxing))
+        hs_yinyang = str(zhu.gan.belongs_to(YinYang))
+        hs_ten = str(zhu.zhuxing)
+        heavenly = HeavenStem(name=hs_name, element=hs_element, yinYang=hs_yinyang, tengod=hs_ten)
 
         # earthly branch and hidden stems
-        eb_name = zhu.zhi.chinese_name
-        eb_element = zhu.zhi.belongs_to(Wuxing).chinese_name
-        eb_yinyang = zhu.zhi.belongs_to(YinYang).chinese_name
+        eb_name = str(zhu.zhi)
+        eb_element = str(zhu.zhi.belongs_to(Wuxing))
+        eb_yinyang = str(zhu.zhi.belongs_to(YinYang))
         hidden: list[HiddenStem] = []
 
         for c in zhu.canggan:
 
-            name = c.gan.chinese_name
-            element = c.gan.belongs_to(Wuxing).chinese_name
-            yinyang = c.gan.belongs_to(YinYang).chinese_name
-            ctype_name = c.canggan_type.name
-            role = role_map[ctype_name]
+            name = str(c.gan)
+            element = str(c.gan.belongs_to(Wuxing))
+            yinyang = str(c.gan.belongs_to(YinYang))
+            role = str(c.canggan_type)
 
-            ten = birth_chart.dayzhu.gan.get_shishen(c.gan).chinese_name
-            hidden.append(HiddenStem(name=name, element=element, yinYang=yinyang, role=role, tenGod=ten))
+            ten = str(birth_chart.dayzhu.gan.get_shishen(c.gan))
+            hidden.append(HiddenStem(name=name, element=element, yinYang=yinyang, role=role, tengod=ten))
         earthly = EarthBranch(name=eb_name, element=eb_element, yinYang=eb_yinyang, hiddenStems=hidden)
 
         return Pillar(
             pillar=pillar_str,
             heavenlyStem=heavenly,
             earthlyBranch=earthly,
-            nayin=zhu.nayin.chinese_name,
+            nayin=str(zhu.nayin),
             xun=xun,
-            shensha=[str(s) for s in zhu.shensha],
-            forDayMastertwelveLifeStages=zhu.xingyun.chinese_name,
-            forPillarStemtwelveLifeStages=zhu.zizuo.chinese_name,
+            shensha=[str(s) for s in zhu.daemon],
+            forDayMastertwelveLifeStages=str(zhu.xingyun),
+            forPillarStemtwelveLifeStages=str(zhu.zizuo),
             kongwang=",".join([str(s) for s in zhu.kongwang]),
-            tiangan_relations=zhu.tiangan_relations,
-            dizhi_relations=zhu.dizhi_relations,
         )
+
+    analysis_output = _build_chart_analysis_output(birth_chart.chart_analysis)
 
     # personal info
     personal = PersonalInfo(
         gregorian_birth=birth_chart._birth_solar,
         lunar_birth=_get_lunar_date_str(birth_chart),
-        true_solar_birth=_get_true_solar_time_str(birth_chart),
-        gender="男" if birth_chart._gender == Gender.MAN else "女",
+        gender=str(birth_chart._gender),
         zodiac=birth_chart.chinese_zodiac,
         constellation=birth_chart.sign,
         birth_term=f"{birth_chart.term.get_name()}第{birth_chart.term.get_day_index()}天",
-        birth_term_time=_get_birth_term_time_str(birth_chart),
-        timezone=str(birth_chart._birth_solar.tzinfo) if birth_chart._birth_solar.tzinfo else None,
+        birth_term_time=str(birth_chart.term.get_solar_term().get_julian_day().get_solar_time()),
     )
 
     # natal chart
@@ -268,24 +328,17 @@ def to_standard_format(birth_chart: BirthChart, target_dt: datetime) -> Standard
     )
 
     natal = NatalChart(
-        day_master=birth_chart.dayzhu.gan.chinese_name,
-        day_master_element=birth_chart.dayzhu.gan.belongs_to(Wuxing).chinese_name,
-        day_master_yinyang=birth_chart.dayzhu.gan.belongs_to(YinYang).chinese_name,
+        day_master=str(birth_chart.dayzhu.gan),
+        day_master_element=str(birth_chart.dayzhu.gan.belongs_to(Wuxing)),
+        day_master_yinyang=str(birth_chart.dayzhu.gan.belongs_to(YinYang)),
         conception_pillar=birth_chart.taiyuan,
         fetal_breath=birth_chart.taixi,
         body_pillar=birth_chart.shengong,
         life_pillar=birth_chart.minggong,
         life_trigram=birth_chart.minggua,
-        kongwang=birth_chart.kongwang[0].chinese_name + birth_chart.kongwang[1].chinese_name,
+        kongwang=f"{birth_chart.kongwang[0]}{birth_chart.kongwang[1]}",
         four_pillars=four,
         shensha=_collect_chart_shensha(birth_chart),
-        element_scores=birth_chart.chart_analysis,
-        day_master_strength=_calc_day_master_strength(birth_chart),
-        favorable_elements=_calc_favorable_elements(birth_chart),
-        unfavorable_elements=_calc_unfavorable_elements(birth_chart),
-        useful_element=_calc_useful_element(birth_chart),
-        taboo_element=_calc_taboo_element(birth_chart),
-        geju=birth_chart.geju,
         calc_rules=_resolved_calc_rules(birth_chart),
     )
 
@@ -296,14 +349,14 @@ def to_standard_format(birth_chart: BirthChart, target_dt: datetime) -> Standard
 
     decade = child_limit.get_start_decade_fortune()
     start_age = decade.get_start_age()
-    start_date_str = _safe_time_str(_safe_call(child_limit, "get_end_time"))
+    start_date_str = str(child_limit.get_end_time())
     direction = _get_luck_direction(child_limit)
 
     for _ in range(0, 10):
 
         pillar_name = decade.get_sixty_cycle().get_name()
         age_range = (decade.get_start_age(), decade.get_end_age())
-        year_range = _get_decade_year_range(decade)
+        year_range = decade.get_start_sixty_cycle_year().get_year(), decade.get_end_sixty_cycle_year().get_year()
         tengod, element, yinyang = _pillar_tengod_element_yinyang(birth_chart, pillar_name)
 
         annual_details: list[AnnualDetail] = []
@@ -312,7 +365,7 @@ def to_standard_format(birth_chart: BirthChart, target_dt: datetime) -> Standard
         for j in range(0, 10):
             minor = fortune.get_sixty_cycle().get_name()
             annual = fortune.get_sixty_cycle_year().get_sixty_cycle().get_name()
-            annual_year = _safe_year_value(_safe_call(fortune.get_sixty_cycle_year(), "get_year"))
+            annual_year = fortune.get_sixty_cycle_year().get_year()
             annual_tg, annual_element, annual_yinyang = _pillar_tengod_element_yinyang(birth_chart, annual)
             annual_details.append(
                 AnnualDetail(
@@ -348,251 +401,243 @@ def to_standard_format(birth_chart: BirthChart, target_dt: datetime) -> Standard
     )
 
     target_flow = _build_target_flow(birth_chart, target_dt)
-    relations = _build_relations(birth_chart)
 
     return StandardBirthChartOutput(
         personal_info=personal,
         natal_chart=natal,
         luck_cycles=luck,
         target_flow=target_flow,
-        relations=relations,
-        chart_analysis=birth_chart.chart_analysis,
+        heuristic_analysis=analysis_output,
     )
 
 
 def plain_draw_chart(birth_chart: BirthChart, target_dt: datetime | None = None) -> None:
-    """绘制命盘的函数示例"""
-    # ANSI 颜色代码
+    """在终端中绘制适配当前标准输出结构的命盘与分析结果。"""
+    render_target = target_dt if target_dt is not None else birth_chart._birth_solar
+    output = to_standard_format(birth_chart, render_target)
+
     RESET = "\033[0m"
     BOLD = "\033[1m"
     DIM = "\033[2m"
 
-    # 颜色
-    C_HEADER = "\033[96m"  # 青色 - 标题
-    C_SUBHEADER = "\033[93m"  # 黄色 - 副标题
-    C_YEAR = "\033[91m"  # 红色 - 年柱
-    C_MONTH = "\033[92m"  # 绿色 - 月柱
-    C_DAY = "\033[94m"  # 蓝色 - 日柱
-    C_HOUR = "\033[95m"  # 紫色 - 时柱
-    C_INFO = "\033[97m"  # 白色 - 信息
-    C_ACCENT = "\033[96m"  # 青色 - 强调
+    C_HEADER = "\033[96m"
+    C_SUBHEADER = "\033[93m"
+    C_YEAR = "\033[91m"
+    C_MONTH = "\033[92m"
+    C_DAY = "\033[94m"
+    C_HOUR = "\033[95m"
+    C_INFO = "\033[97m"
+    C_ACCENT = "\033[36m"
+    C_SOFT = "\033[90m"
+    WIDTH = 92
 
-    def print_header(title: str):
-        print(f"\n{BOLD}{C_HEADER}{'=' * 50}{RESET}")
-        print(f"{BOLD}{C_HEADER}{title:^50}{RESET}")
-        print(f"{BOLD}{C_HEADER}{'=' * 50}{RESET}")
+    def style(text: str, *codes: str) -> str:
+        return "".join(codes) + text + RESET
 
-    def print_subheader(title: str):
-        print(f"\n{BOLD}{C_SUBHEADER}■ {title}{RESET}")
+    def header(title: str) -> None:
+        inner = f" {title} "
+        pad = max(WIDTH - len(inner), 0)
+        left = pad // 2
+        right = pad - left
+        print()
+        print(style("┏" + "━" * WIDTH + "┓", BOLD, C_HEADER))
+        print(style("┃" + " " * left + inner + " " * right + "┃", BOLD, C_HEADER))
+        print(style("┗" + "━" * WIDTH + "┛", BOLD, C_HEADER))
 
-    def p(key: str, value: str, color: str = C_INFO):
-        print(f"  {color}{key}: {value}{RESET}")
+    def subheader(title: str) -> None:
+        print(style(f"\n▶ {title}", BOLD, C_SUBHEADER))
 
-    # ========== 基本信息 ==========
-    print_header("基 本 信 息")
-    gender_str = "男" if birth_chart._gender == Gender.MAN else "女"
-    p("公历生日", birth_chart._birth_solar.strftime("%Y-%m-%d %H:%M:%S"))
-    p("性别", gender_str)
-    p("生肖", birth_chart.chinese_zodiac)
-    p("星座", birth_chart.sign)
-    p("出生节气", f"{birth_chart.term.get_name()}第{birth_chart.term.get_day_index()}天")
+    def line(label: str, value: str | None, color: str = C_INFO, indent: str = "  ") -> None:
+        if value is None or value == "":
+            value = "无"
+        print(f"{indent}{style(label + ':', DIM)} {style(str(value), color)}")
 
-    # ========== 四柱八字 ==========
-    print_header("四 柱 八 字")
+    def wrapped_items(label: str, values: list[str], color: str = C_INFO, indent: str = "  ") -> None:
+        if not values:
+            line(label, "无", color=color, indent=indent)
+            return
+        rows: list[str] = []
+        current = ""
+        for value in values:
+            candidate = value if not current else f"{current} / {value}"
+            if len(candidate) > 72:
+                rows.append(current)
+                current = value
+            else:
+                current = candidate
+        if current:
+            rows.append(current)
+        print(f"{indent}{style(label + ':', DIM)} {style(rows[0], color)}")
+        for row in rows[1:]:
+            print(f"{indent}{' ' * (len(label) + 2)} {style(row, color)}")
 
-    # 构建八字表格
-    pillars = [
-        ("年柱", birth_chart.yearzhu, C_YEAR),
-        ("月柱", birth_chart.monthzhu, C_MONTH),
-        ("日柱", birth_chart.dayzhu, C_DAY),
-        ("时柱", birth_chart.bihourzhu, C_HOUR),
+    def draw_bar(label: str, score: float, max_score: float, count: int | None = None, color: str = C_INFO) -> None:
+        width = 24
+        ratio = 0.0 if max_score <= 0 else score / max_score
+        filled = int(ratio * width)
+        bar = "█" * filled + "░" * (width - filled)
+        count_text = "" if count is None else f"  数量 {count}"
+        print(f"  {style(label, BOLD, color):<10} {style(bar, color)}  {score:>5.2f}{count_text}")
+
+    def join_non_empty(values: list[str | None]) -> str:
+        return " / ".join([value for value in values if value])
+
+    personal = output.personal_info
+    natal = output.natal_chart
+    analysis = output.heuristic_analysis
+
+    header("八字命盘")
+    line("公历", personal.gregorian_birth.strftime("%Y-%m-%d %H:%M:%S"))
+    line("农历", personal.lunar_birth)
+    line("性别", personal.gender)
+    line("生肖 / 星座", f"{personal.zodiac} / {personal.constellation}")
+    line("出生节气", personal.birth_term)
+    line("交节时刻", personal.birth_term_time)
+    line("时区", getattr(personal, "timezone", None))
+
+    header("四柱盘面")
+    pillar_configs = [
+        ("年柱", natal.four_pillars.year, C_YEAR),
+        ("月柱", natal.four_pillars.month, C_MONTH),
+        ("日柱", natal.four_pillars.day, C_DAY),
+        ("时柱", natal.four_pillars.hour, C_HOUR),
     ]
+    for name, pillar, color in pillar_configs:
+        subheader(f"{name}  {pillar.pillar}")
+        line(
+            "天干",
+            f"{pillar.heavenlyStem.name} {pillar.heavenlyStem.element}{pillar.heavenlyStem.yinYang}  主星 {pillar.heavenlyStem.tengod}",
+            color=color,
+            indent="    ",
+        )
+        line(
+            "地支",
+            f"{pillar.earthlyBranch.name} {pillar.earthlyBranch.element}{pillar.earthlyBranch.yinYang}",
+            color=color,
+            indent="    ",
+        )
+        hidden_stems = [
+            f"{item.name}[{item.role}/{item.tengod}/{item.element}{item.yinYang}]"
+            for item in pillar.earthlyBranch.hiddenStems
+        ]
+        wrapped_items("藏干", hidden_stems, color=color, indent="    ")
+        line("纳音 / 旬", join_non_empty([pillar.nayin, pillar.xun]), color=color, indent="    ")
+        line(
+            "星运 / 自坐",
+            join_non_empty([pillar.forDayMastertwelveLifeStages, pillar.forPillarStemtwelveLifeStages]),
+            color=color,
+            indent="    ",
+        )
+        line("空亡", pillar.kongwang, color=color, indent="    ")
+        wrapped_items("神煞", pillar.shensha, color=color, indent="    ")
 
-    # 打印表头
-    print(f"\n{BOLD}{'柱位':<8}{'天干':<6}{'地支':<6}{'纳音':<8}{'主星':<8}{'副星':<12}{'空亡':<8}{RESET}")
-    print("-" * 70)
+    header("命盘摘要")
+    line("日主", f"{natal.day_master} {natal.day_master_element}{natal.day_master_yinyang}")
+    line("胎元 / 胎息", f"{natal.conception_pillar} / {natal.fetal_breath}")
+    line("身宫 / 命宫", f"{natal.body_pillar} / {natal.life_pillar}")
+    line("命卦", natal.life_trigram)
+    line("全盘空亡", natal.kongwang)
+    wrapped_items("全盘神煞", natal.shensha)
 
-    for name, zhu, color in pillars:
-        pillar_str = zhu.gan.chinese_name + zhu.zhi.chinese_name
-        nayin = zhu.nayin.chinese_name
-        zhuxing = zhu.zhuxing.chinese_name
-        fuxing_str = "/".join([f.chinese_name for f in zhu.fuxing])
-        kongwang_str = zhu.kongwang[0].chinese_name + zhu.kongwang[1].chinese_name
+    header("分析结果")
+    subheader("五行")
+    wuxing_items = analysis.wuxing.items
+    max_wuxing_score = max((item.score for item in wuxing_items.values()), default=0.0)
+    for wuxing in ["木", "火", "土", "金", "水"]:
+        item = wuxing_items[wuxing]
+        draw_bar(wuxing, item.score, max_wuxing_score, count=item.count, color=C_ACCENT)
+    line("月令五行 / 最旺五行", f"{analysis.wuxing.month_zhi_wuxing} / {analysis.wuxing.strongest}")
+
+    subheader("旺衰")
+    line("日主强弱", analysis.strength.day_master_strength)
+    line(
+        "扶助 / 克泄耗",
+        f"{analysis.strength.support_score:.2f} / {analysis.strength.opposition_score:.2f}",
+    )
+    line("扶助占比", f"{analysis.strength.support_ratio:.1%}")
+    line("月令家族", analysis.strength.month_ling_shishen_family)
+    line(
+        "通根",
+        f"{'有' if analysis.strength.day_master_has_root else '无'}  共 {analysis.strength.day_master_root_count} 处  分数 {analysis.strength.day_master_root_score:.2f}",
+    )
+    roots = [
+        f"{root.pillar}{root.branch}藏{root.gan}({root.role}, {root.score:.2f})"
+        for root in analysis.strength.day_master_roots
+    ]
+    wrapped_items("根气明细", roots)
+
+    subheader("十神与喜忌")
+    family_scores = analysis.ten_god.ten_god_family_scores
+    max_family_score = max(family_scores.values(), default=0.0)
+    for family in ["比劫", "食伤", "财星", "官杀", "印星"]:
+        draw_bar(family, family_scores[family], max_family_score, color=C_INFO)
+    line(
+        "喜用候选",
+        join_non_empty([analysis.favorability.useful_element, "、".join(analysis.favorability.favorable_elements)]),
+    )
+    line(
+        "忌神候选",
+        join_non_empty([analysis.favorability.taboo_element, "、".join(analysis.favorability.unfavorable_elements)]),
+    )
+
+    subheader("格局与关系")
+    line("格局候选", analysis.geju.geju)
+    wrapped_items("判断依据", analysis.geju.basis)
+    if analysis.relations.events:
+        for index, event in enumerate(analysis.relations.events, start=1):
+            participants = " + ".join([f"{item.pillar}{item.position}{item.value}" for item in event.participants])
+            detail = participants
+            if event.result:
+                detail += f" => {event.result}"
+            if event.qualifier:
+                detail += f" ({event.qualifier})"
+            print(f"  {style(f'{index:>2}.', DIM)} {style(event.name, BOLD, C_ACCENT)}  {detail}")
+    else:
+        line("关系事件", "无")
+
+    header("运势")
+    line("起运", f"{output.luck_cycles.start_age}岁")
+    line("起运日期", output.luck_cycles.start_date)
+    line("顺逆", output.luck_cycles.direction)
+    subheader("前八步大运")
+    for index, cycle in enumerate(output.luck_cycles.major_cycles[:8], start=1):
+        age_text = f"{cycle.age_range[0]}-{cycle.age_range[1]}岁"
+        year_text = f"{cycle.year_range[0]}-{cycle.year_range[1]}" if cycle.year_range is not None else "年份待补"
+        detail = join_non_empty([cycle.tengod, cycle.element, cycle.yinyang])
         print(
-            f"{color}{name:<8}{pillar_str[0]:<6}{pillar_str[1]:<6}{nayin:<8}{zhuxing:<8}{fuxing_str:<12}{kongwang_str:<8}{RESET}"
+            f"  {style(f'{index:>2}.', DIM)} {style(cycle.pillar, BOLD, C_INFO)}  {age_text:<12} {year_text:<12} {detail}"
         )
 
-    # ========== 日主信息 ==========
-    print_subheader("日主信息")
-    day_master = birth_chart.dayzhu.gan
-    day_element = day_master.belongs_to(Wuxing)
-    day_yinyang = day_master.belongs_to(YinYang)
-    p("日主", f"{day_master.chinese_name} ({day_element.chinese_name}·{day_yinyang.chinese_name})")
-
-    # 五行分析
-    if birth_chart.chart_analysis:
-        print_subheader("五行分数")
-        scores = birth_chart.chart_analysis
-        wuxing_list = ["木", "火", "土", "金", "水"]
-        max_score = max((scores.get(w, {}).get("score", 0) for w in wuxing_list), default=1)
-
-        bar_chars = "▏▎▍▌▋▊█"
-        for w in wuxing_list:
-            score = scores.get(w, {}).get("score", 0)
-            count = scores.get(w, {}).get("count", 0)
-            # 归一化并绘制条形图
-            ratio = score / max_score if max_score > 0 else 0
-            bar_len = int(ratio * 20)
-            bar = "█" * bar_len + "░" * (20 - bar_len)
-            print(f"  {w}: {bar} ({score:.1f}) [数量: {count}]")
-
-        p("月令", scores.get("month_zhi_wuxing", ""))
-        p("最强五行", scores.get("strongest", ""))
-
-        # 身强身弱判断
-        total = sum(v["score"] for v in scores.values() if isinstance(v, dict))
-        if total > 0:
-            avg = total / 5
-            day_master_score = scores.get(day_element.chinese_name, {}).get("score", 0)
-            strength = "身强" if day_master_score >= avg else "身弱"
-            p("日主强弱", strength)
-
-    # ========== 宫位信息 ==========
-    print_subheader("宫位信息")
-    p("胎元", birth_chart.taiyuan)
-    p("胎息", birth_chart.taixi)
-    p("身宫", birth_chart.shengong)
-    p("命宫", birth_chart.minggong)
-    p("命卦", birth_chart.minggua if birth_chart.minggua else "")
-    p("空亡", birth_chart.kongwang[0].chinese_name + birth_chart.kongwang[1].chinese_name)
-
-    # ========== 格局信息 ==========
-    if birth_chart.geju:
-        print_subheader("格局分析")
-        geju = birth_chart.geju
-        p("格局类型", geju.value)
-
-    # ========== 神煞汇总 ==========
-    print_subheader("神煞汇总")
-
-    # 收集每个柱的神煞
-    pillar_names = ["年柱", "月柱", "日柱", "时柱"]
-    pillars = [birth_chart.yearzhu, birth_chart.monthzhu, birth_chart.dayzhu, birth_chart.bihourzhu]
-
-    # 按柱分类收集神煞
-    shensha_by_pillar: dict[str, list[str]] = {name: [] for name in pillar_names}
-
-    for zhu, name in zip(pillars, pillar_names):
-        for s in zhu.shensha:
-            shensha_str = str(s)
-            if shensha_str not in shensha_by_pillar[name]:
-                shensha_by_pillar[name].append(shensha_str)
-
-    # 打印每个柱的神煞
-    has_shensha = False
-    for name in pillar_names:
-        shensha_list = shensha_by_pillar[name]
-        if shensha_list:
-            has_shensha = True
-            print(f"  {C_ACCENT}{name}:{RESET} ", end="")
-            # 每行显示4个
-            for i, s in enumerate(shensha_list):
-                if i > 0 and i % 4 == 0:
-                    print(f"\n  {'':12}", end="")
-                if i > 0:
-                    print(" / ", end="")
-                print(f"{C_ACCENT}{s}{RESET}", end="")
-            print()
-
-    if not has_shensha:
-        print("  无")
-
-    # ========== 大运 ==========
-    print_header("大 运 走 向")
-    decade_fortune = birth_chart._child_limit.get_start_decade_fortune()
-    start_age = decade_fortune.get_start_age()
-    p("起运年龄", f"{start_age}岁")
-
-    # 判断顺逆
-    child_limit = birth_chart._child_limit
-    is_forward = getattr(child_limit, "is_forward", lambda: True)()
-    direction = "顺行" if is_forward else "逆行"
-    p("运程方向", direction)
-
-    # 打印前8步大运
-    print_subheader("大运干支")
-    print(f"\n{BOLD}{'序号':<6}{'年龄':<12}{'干支':<8}{'天干':<6}{'五行':<6}{'阴阳':<6}{RESET}")
-    print("-" * 60)
-
-    for i in range(0, 8):
-        pillar_name = decade_fortune.get_sixty_cycle().get_name()
-        gan = Tiangan.from_chinese_name(pillar_name[0])
-        tengod = birth_chart.dayzhu.gan.get_shishen(gan).chinese_name
-        element = gan.belongs_to(Wuxing).chinese_name
-        yinyang = gan.belongs_to(YinYang).chinese_name
-
-        age_start = decade_fortune.get_start_age()
-        age_end = decade_fortune.get_end_age()
-
-        print(f"{i+1:<6}{age_start}-{age_end}岁{pillar_name:<8}{tengod:<6}{element:<6}{yinyang:<6}")
-        decade_fortune = decade_fortune.next(1)
-
-    # ========== 流年 (80岁以前，按大运分组) ==========
-    print_subheader("流年预览 (80岁以前)")
-
-    decade_fortune = birth_chart._child_limit.get_start_decade_fortune()
-    decade_idx = 0
-
-    # 遍历所有大运，直到80岁
-    while decade_fortune:
-        age_start = decade_fortune.get_start_age()
-        age_end = decade_fortune.get_end_age()
-
-        # 如果大运起始年龄超过80岁，停止
-        if age_start >= 80:
-            break
-
-        decade_pillar = decade_fortune.get_sixty_cycle().get_name()
-        decade_gan = Tiangan.from_chinese_name(decade_pillar[0])
-        decade_tengod = birth_chart.dayzhu.gan.get_shishen(decade_gan).chinese_name
-
-        # 打印大运分组标题
-        # 显示实际年龄段
-        end_display = min(age_end, 79)
-        print(
-            f"\n{C_ACCENT}┌─ 第{decade_idx + 1}大运: {decade_pillar} ({decade_tengod}) - {age_start}~{end_display}岁 ─┐{RESET}"
+    if target_dt is not None:
+        header("目标时刻流转")
+        flow = output.target_flow
+        line("目标时刻", flow.target_datetime.strftime("%Y-%m-%d %H:%M:%S"))
+        line("目标农历", flow.lunar_date)
+        line(
+            "流转四柱",
+            f"{flow.year_pillar} / {flow.month_pillar} / {flow.day_pillar} / {flow.hour_pillar}",
         )
+        line(
+            "流转十神",
+            f"年{flow.year_tengod} 月{flow.month_tengod} 日{flow.day_tengod} 时{flow.hour_tengod}",
+        )
+        line("目标年份小运", flow.minor_pillar)
+        subheader("流月")
+        for month in flow.flow_months:
+            detail = join_non_empty([month.month_tengod, month.month_element, month.month_yinyang])
+            print(
+                f"  {style(f'{month.index:>2}.', DIM)} {style(month.solar_term, BOLD, C_INFO)}  "
+                f"{month.start_date}  {month.month_pillar}  {detail}"
+            )
 
-        # 表头
-        print(f"{BOLD}{'年龄':<6}{'小运':<6}{'流年':<6}{'十神':<6}{'五行':<4}{'阴阳':<4}{RESET}")
-        print("-" * 40)
+    header("计算口径")
+    for key, value in natal.calc_rules.items():
+        line(key, value, color=C_SOFT)
 
-        # 打印该大运下的10个流年
-        fortune = decade_fortune.get_start_fortune()
-        for j in range(0, 10):
-            age = fortune.get_age()
-
-            # 只显示80岁以内的
-            if age > 80:
-                break
-
-            minor = fortune.get_sixty_cycle().get_name()
-            annual = fortune.get_sixty_cycle_year().get_sixty_cycle().get_name()
-
-            gan = Tiangan.from_chinese_name(annual[0])
-            tengod = birth_chart.dayzhu.gan.get_shishen(gan).chinese_name
-            element = gan.belongs_to(Wuxing).chinese_name
-            yinyang = gan.belongs_to(YinYang).chinese_name
-
-            print(f"{age:<6}{minor:<6}{annual:<6}{tengod:<6}{element:<4}{yinyang:<4}")
-            fortune = fortune.next(1)
-
-        decade_fortune = decade_fortune.next(1)
-        decade_idx += 1
-
-    # 结束
-    print(f"\n{BOLD}{C_HEADER}{'=' * 50}{RESET}")
-    print(f"{DIM}注：八字信息仅供参考，具体分析请咨询专业人士{RESET}")
+    print()
+    print(
+        style("注：旺衰、喜忌、格局、关系结果属于程序化分析输出，适合对照与检索，不应直接替代人工断盘。", DIM, C_SOFT)
+    )
     print()
 
 
@@ -608,129 +653,21 @@ def _safe_call(obj: object, method: str):
     return None
 
 
-def _safe_year_value(obj: object) -> Optional[int]:
-    for method in ("get_year", "get_value", "get_year_value"):
-        value = _safe_call(obj, method)
-        if isinstance(value, int):
-            return value
-    if isinstance(obj, int):
-        return obj
-    return None
-
-
-def _safe_time_str(obj: object) -> Optional[str]:
-    if obj is None:
-        return None
-    try:
-        return str(obj)
-    except Exception:
-        return None
-
-
 def _get_lunar_date_str(birth_chart: BirthChart) -> Optional[str]:
-    lunar_hour = _safe_call(birth_chart._solar_time, "get_lunar_hour")
+    lunar_hour = birth_chart._solar_time.get_lunar_hour()
     if lunar_hour is None:
         return None
     return str(lunar_hour)
 
 
-def _get_true_solar_time_str(birth_chart: BirthChart) -> Optional[str]:
-    true_time = _safe_call(birth_chart._solar_time, "get_true_solar_time")
-    if true_time is None:
-        return None
-    return str(true_time)
-
-
-def _get_birth_term_time_str(birth_chart: BirthChart) -> Optional[str]:
-    term = birth_chart.term
-    solar_term = _safe_call(term, "get_solar_term")
-    if solar_term is None:
-        return None
-    julian = _safe_call(solar_term, "get_julian_day")
-    if julian is None:
-        return None
-    solar_time = _safe_call(julian, "get_solar_time")
-    return str(solar_time) if solar_time is not None else None
-
-
 def _collect_chart_shensha(birth_chart: BirthChart) -> List[str]:
     result: list[str] = []
     for zhu in [birth_chart.yearzhu, birth_chart.monthzhu, birth_chart.dayzhu, birth_chart.bihourzhu]:
-        for s in zhu.shensha:
+        for s in zhu.daemon:
             name = str(s)
             if name not in result:
                 result.append(name)
     return result
-
-
-def _calc_day_master_strength(birth_chart: BirthChart) -> Optional[Strength]:
-    method = birth_chart._calc_rules.get("day_master_strength", "simple_score")
-    if method != "simple_score":
-        return None
-    scores = birth_chart.chart_analysis
-    if not scores:
-        return None
-    day_element = birth_chart.dayzhu.gan.belongs_to(Wuxing).chinese_name
-
-    total = sum(v["score"] for v in scores.values() if isinstance(v, dict))
-    if total <= 0:
-        return None
-    avg = total / 5
-    return Strength.STRONG if scores[day_element]["score"] >= avg else Strength.WEAK
-
-
-def _calc_favorable_elements(birth_chart: BirthChart) -> List[str]:
-    strength = _calc_day_master_strength(birth_chart)
-    if strength is None:
-        return []
-    day_element = birth_chart.dayzhu.gan.belongs_to(Wuxing)
-    if strength == Strength.STRONG:
-        # 身强取泄耗与克制为喜用
-        return [
-            day_element.generate().chinese_name,
-            _wuxing_controller(day_element).chinese_name,
-        ]
-    # 身弱取比助与生扶为喜用
-    return [
-        day_element.chinese_name,
-        _wuxing_generator(day_element).chinese_name,
-    ]
-
-
-def _calc_unfavorable_elements(birth_chart: BirthChart) -> List[str]:
-    strength = _calc_day_master_strength(birth_chart)
-    if strength is None:
-        return []
-    day_element = birth_chart.dayzhu.gan.belongs_to(Wuxing)
-    if strength == Strength.STRONG:
-        return [
-            day_element.chinese_name,
-            _wuxing_generator(day_element).chinese_name,
-        ]
-    return [
-        day_element.generate().chinese_name,
-        _wuxing_controller(day_element).chinese_name,
-    ]
-
-
-def _calc_useful_element(birth_chart: BirthChart) -> Optional[str]:
-    elements = _calc_favorable_elements(birth_chart)
-    return elements[0] if elements else None
-
-
-def _calc_taboo_element(birth_chart: BirthChart) -> Optional[str]:
-    elements = _calc_unfavorable_elements(birth_chart)
-    return elements[0] if elements else None
-
-
-def _wuxing_generator(element: Wuxing) -> Wuxing:
-    # 取生我者（母气）
-    return Wuxing((element.num - 1) % 5)
-
-
-def _wuxing_controller(element: Wuxing) -> Wuxing:
-    # 取克我者
-    return Wuxing((element.num - 2) % 5)
 
 
 def _pillar_tengod_element_yinyang(
@@ -739,9 +676,9 @@ def _pillar_tengod_element_yinyang(
     if not pillar or len(pillar) < 2:
         return None, None, None
     gan = Tiangan.from_chinese_name(pillar[0])
-    tengod = birth_chart.dayzhu.gan.get_shishen(gan).chinese_name
-    element = gan.belongs_to(Wuxing).chinese_name
-    yinyang = gan.belongs_to(YinYang).chinese_name
+    tengod = str(birth_chart.dayzhu.gan.get_shishen(gan))
+    element = str(gan.belongs_to(Wuxing))
+    yinyang = str(gan.belongs_to(YinYang))
     return tengod, element, yinyang
 
 
@@ -753,10 +690,8 @@ def _get_luck_direction(child_limit: object) -> Optional[str]:
 
 
 def _get_decade_year_range(decade: object) -> Optional[Tuple[int, int]]:
-    start = _safe_year_value(_safe_call(decade, "get_start_year"))
-    end = _safe_year_value(_safe_call(decade, "get_end_year"))
-    if start is None or end is None:
-        return None
+    start = decade.get_start_sixty_cycle_year().get_year()
+    end = decade.get_end_sixty_cycle_year().get_year()
     return (start, end)
 
 
@@ -766,7 +701,7 @@ def _build_target_flow(birth_chart: BirthChart, target_dt: datetime) -> TargetFl
         target_dt.year, target_dt.month, target_dt.day, target_dt.hour, target_dt.minute, target_dt.second
     )
     lunar_hour = solar_time.get_lunar_hour()
-    eight_char = lunar_hour.get_eight_char()
+    eight_char = BirthChart.calc_eightchar(lunar_hour, birth_chart._calc_rules)
 
     year_pillar = eight_char.get_year().get_name()
     month_pillar = eight_char.get_month().get_name()
@@ -859,7 +794,9 @@ def _build_flow_months(birth_chart: BirthChart, flow_year: int, strategy: str) -
         solar_time = birth_chart._solar_time.__class__.from_ymd_hms(
             term_dt.year, term_dt.month, term_dt.day, term_dt.hour, term_dt.minute, term_dt.second
         )
-        month_pillar = solar_time.get_lunar_hour().get_eight_char().get_month().get_name()
+        month_pillar = (
+            BirthChart.calc_eightchar(solar_time.get_lunar_hour(), birth_chart._calc_rules).get_month().get_name()
+        )
         month_tg, month_element, month_yinyang = _pillar_tengod_element_yinyang(birth_chart, month_pillar)
         start_date = term_dt.strftime("%Y-%m-%d")
         flow_months.append(
@@ -878,17 +815,23 @@ def _build_flow_months(birth_chart: BirthChart, flow_year: int, strategy: str) -
 
 def _find_minor_pillar_for_year(birth_chart: BirthChart, target_year: int) -> Optional[str]:
     child_limit = birth_chart._child_limit
-    decade = _safe_call(child_limit, "get_start_decade_fortune")
+    decade = child_limit.get_start_decade_fortune()
     if decade is None:
         return None
-    fortune = _safe_call(decade, "get_start_fortune")
-    for _ in range(0, 150):
-        if fortune is None:
-            return None
-        year = _safe_year_value(_safe_call(fortune.get_sixty_cycle_year(), "get_year"))
+    fortune = decade.get_start_fortune()
+    if fortune is None:
+        return None
+
+    current_year = fortune.get_sixty_cycle_year().get_year()
+    if current_year is None:
+        return None
+
+    step = 1 if target_year >= current_year else -1
+    for _ in range(0, 180):
+        year = fortune.get_sixty_cycle_year().get_year()
         if year == target_year:
             return fortune.get_sixty_cycle().get_name()
-        fortune = fortune.next(1)
+        fortune = fortune.next(step)
     return None
 
 
@@ -896,8 +839,12 @@ def _resolved_calc_rules(birth_chart: BirthChart) -> dict[str, str]:
     return {
         "minggua": birth_chart._calc_rules.get("minggua", "bazhai"),
         "minggong": birth_chart._calc_rules.get("minggong", "eightchar_own_sign"),
+        "zi_hour": birth_chart._calc_rules.get("zi_hour", "lunar_sect2_day_same"),
+        "analysis_framework": birth_chart._calc_rules.get("analysis_framework", "heuristic_scoring_v1"),
         "day_master_strength": birth_chart._calc_rules.get("day_master_strength", "simple_score"),
-        "relations": birth_chart._calc_rules.get("relations", "simple_he_chong"),
+        "favorability": birth_chart._calc_rules.get("favorability", "strength_balance_heuristic"),
+        "geju": birth_chart._calc_rules.get("geju", "rule_based_candidate_match"),
+        "relations": birth_chart._calc_rules.get("relations", "core_relations_v2"),
         "flow_months": birth_chart._calc_rules.get("flow_months", "solar_term_month_start"),
         "minor_fortune": birth_chart._calc_rules.get("minor_fortune", "child_limit"),
         "flow_year": birth_chart._calc_rules.get("flow_year", "lichun_boundary"),
@@ -920,69 +867,122 @@ def _get_sixty_cycle_ten(pillar: str) -> Optional[str]:
         return None
 
 
-def _build_relations(birth_chart: BirthChart) -> Relations:
-    pillars = {
-        "year": birth_chart.yearzhu,
-        "month": birth_chart.monthzhu,
-        "day": birth_chart.dayzhu,
-        "hour": birth_chart.bihourzhu,
-    }
-    items = {}
-    for name in pillars:
-        items[name] = PillarRelations()
-
-    names = list(pillars.keys())
-    for i, left in enumerate(names):
-        for right in names[i + 1 :]:
-            left_zhu = pillars[left]
-            right_zhu = pillars[right]
-
-            stem_rel = _tiangan_relation(left_zhu.gan, right_zhu.gan)
-            if stem_rel:
-                items[left].stem.append(RelationItem(target=right, relation=stem_rel))
-                items[right].stem.append(RelationItem(target=left, relation=stem_rel))
-
-            branch_rel = _dizhi_relation(left_zhu.zhi, right_zhu.zhi)
-            if branch_rel:
-                items[left].branch.append(RelationItem(target=right, relation=branch_rel))
-                items[right].branch.append(RelationItem(target=left, relation=branch_rel))
-
-    return Relations(
-        year=items["year"],
-        month=items["month"],
-        day=items["day"],
-        hour=items["hour"],
+def _build_relation_event_output(event) -> RelationEvent:
+    return RelationEvent(
+        name=event.name,
+        relation=str(event.relation_type),
+        participants=[
+            RelationParticipant(
+                pillar=participant.pillar.value,
+                position=participant.position.value,
+                value=str(participant.value),
+            )
+            for participant in event.participants
+        ],
+        result=str(event.outcome) if event.outcome else None,
+        qualifier=str(event.qualifier) if event.qualifier else None,
     )
 
 
-def _tiangan_relation(left: Tiangan, right: Tiangan) -> Optional[str]:
-    if (left, right) in _TIANGAN_CHONG or (right, left) in _TIANGAN_CHONG:
-        return "冲"
-    if (left, right) in _TIANGAN_HE or (right, left) in _TIANGAN_HE:
-        return "合"
-    return None
+def _build_relation_index_item_output(item) -> RelationIndexItem:
+    return RelationIndexItem(
+        event_index=item.event_index,
+        name=item.name,
+        relation=str(item.relation_type),
+        peers=[RelationPeer(pillar=peer.pillar.value, value=str(peer.value)) for peer in item.peers],
+        result=str(item.outcome) if item.outcome else None,
+        qualifier=str(item.qualifier) if item.qualifier else None,
+    )
 
 
-def _dizhi_relation(left, right) -> Optional[str]:
-    if left.is_chong(right):
-        return "冲"
-    if left.is_he(right):
-        return "合"
-    return None
+def _build_chart_analysis_output(analysis: InternalChartAnalysis) -> ChartAnalysisOutput:
+    wuxing_items = {
+        str(wuxing): WuxingScoreOutput(count=item.count, score=round(item.score, 3))
+        for wuxing, item in analysis.wuxing.items.items()
+    }
+    strength = analysis.strength
+    ten_god = analysis.ten_god
+    favorability = analysis.favorability
+    geju = analysis.geju
 
-
-_TIANGAN_CHONG = {
-    (Tiangan.Jia, Tiangan.Geng),
-    (Tiangan.Yi, Tiangan.Xin),
-    (Tiangan.Bing, Tiangan.Ren),
-    (Tiangan.Ding, Tiangan.Gui),
-    (Tiangan.Wu, Tiangan.Ji),
-}
-
-_TIANGAN_HE = {
-    (Tiangan.Jia, Tiangan.Ji),
-    (Tiangan.Yi, Tiangan.Geng),
-    (Tiangan.Bing, Tiangan.Xin),
-    (Tiangan.Ding, Tiangan.Ren),
-    (Tiangan.Wu, Tiangan.Gui),
-}
+    return ChartAnalysisOutput(
+        wuxing=WuxingAnalysisOutput(
+            items=wuxing_items,
+            month_zhi_wuxing=str(analysis.wuxing.month_zhi_wuxing) if analysis.wuxing.month_zhi_wuxing else "",
+            strongest=str(analysis.wuxing.strongest) if analysis.wuxing.strongest else "",
+            total_score=round(analysis.wuxing.total_score, 3),
+        ),
+        strength=StrengthAnalysisOutput(
+            day_master_wuxing=str(strength.day_master_wuxing) if strength.day_master_wuxing else "",
+            month_ling_shishen_family=strength.month_ling_shishen_family,
+            support_score=round(strength.support_score, 3),
+            opposition_score=round(strength.opposition_score, 3),
+            support_ratio=round(strength.support_ratio, 4),
+            day_master_has_root=strength.day_master_has_root,
+            day_master_root_count=strength.day_master_root_count,
+            day_master_root_score=round(strength.day_master_root_score, 3),
+            day_master_roots=[
+                RootInfoOutput(
+                    pillar=item.pillar,
+                    branch=str(item.branch),
+                    gan=str(item.gan),
+                    role=str(item.role),
+                    score=round(item.score, 3),
+                )
+                for item in strength.day_master_roots
+            ],
+            day_master_strength=str(strength.day_master_strength) if strength.day_master_strength else None,
+        ),
+        ten_god=TenGodAnalysisOutput(
+            ten_god_scores={str(key): round(value, 3) for key, value in ten_god.scores.items()},
+            ten_god_family_scores={key: round(value, 3) for key, value in ten_god.family_scores.items()},
+        ),
+        favorability=FavorabilityAnalysisOutput(
+            favorable_elements=[str(item) for item in favorability.favorable_elements],
+            unfavorable_elements=[str(item) for item in favorability.unfavorable_elements],
+            useful_element=str(favorability.useful_element) if favorability.useful_element else None,
+            taboo_element=str(favorability.taboo_element) if favorability.taboo_element else None,
+        ),
+        geju=GejuAnalysisOutput(
+            geju=geju.geju.value if geju.geju else None,
+            basis=list(geju.basis),
+        ),
+        relations=Relations(
+            events=[_build_relation_event_output(event) for event in analysis.relations.events],
+            by_pillar=RelationByPillar(
+                year=PillarRelations(
+                    stem=[
+                        _build_relation_index_item_output(item) for item in analysis.relations.pillar_index.year.tiangan
+                    ],
+                    branch=[
+                        _build_relation_index_item_output(item) for item in analysis.relations.pillar_index.year.dizhi
+                    ],
+                ),
+                month=PillarRelations(
+                    stem=[
+                        _build_relation_index_item_output(item)
+                        for item in analysis.relations.pillar_index.month.tiangan
+                    ],
+                    branch=[
+                        _build_relation_index_item_output(item) for item in analysis.relations.pillar_index.month.dizhi
+                    ],
+                ),
+                day=PillarRelations(
+                    stem=[
+                        _build_relation_index_item_output(item) for item in analysis.relations.pillar_index.day.tiangan
+                    ],
+                    branch=[
+                        _build_relation_index_item_output(item) for item in analysis.relations.pillar_index.day.dizhi
+                    ],
+                ),
+                hour=PillarRelations(
+                    stem=[
+                        _build_relation_index_item_output(item) for item in analysis.relations.pillar_index.hour.tiangan
+                    ],
+                    branch=[
+                        _build_relation_index_item_output(item) for item in analysis.relations.pillar_index.hour.dizhi
+                    ],
+                ),
+            ),
+        ),
+    )

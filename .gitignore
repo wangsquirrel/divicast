@@ -5,5 +5,7 @@ __pycache__
 .github
 .venv/
 .qodo/
+.agents/
 dist/
 TODO.md
+log/

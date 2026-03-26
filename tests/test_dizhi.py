@@ -26,17 +26,17 @@ class TestDizhi(unittest.TestCase):
     def test_canggan(self):
         self.assertEqual(
             [Canggan(Tiangan.Gui, CangganType.MAIN)], Dizhi.Zi.canggan())
-        self.assertEqual([Canggan(Tiangan.Ji, CangganType.MAIN), Canggan(Tiangan.Xin, CangganType.MIDDLE), Canggan(Tiangan.Gui, CangganType.SECONDARY)],
+        self.assertEqual([Canggan(Tiangan.Ji, CangganType.MAIN), Canggan(Tiangan.Gui, CangganType.MIDDLE), Canggan(Tiangan.Xin, CangganType.SECONDARY)],
                          Dizhi.Chou.canggan())
         self.assertEqual([Canggan(Tiangan.Bing, CangganType.MAIN), Canggan(Tiangan.Geng, CangganType.MIDDLE), Canggan(Tiangan.Wu, CangganType.SECONDARY)],
                          Dizhi.Si.canggan())
-        self.assertEqual([Canggan(Tiangan.Ji, CangganType.MAIN), Canggan(Tiangan.Yi, CangganType.MIDDLE), Canggan(Tiangan.Ding, CangganType.SECONDARY)],
+        self.assertEqual([Canggan(Tiangan.Ji, CangganType.MAIN), Canggan(Tiangan.Ding, CangganType.MIDDLE), Canggan(Tiangan.Yi, CangganType.SECONDARY)],
                          Dizhi.Wei.canggan())
         self.assertEqual([Canggan(Tiangan.Geng, CangganType.MAIN), Canggan(Tiangan.Ren, CangganType.MIDDLE), Canggan(Tiangan.Wu, CangganType.SECONDARY)],
                          Dizhi.Shen.canggan())
         self.assertEqual(
             [Canggan(Tiangan.Xin, CangganType.MAIN)], Dizhi.You.canggan())
-        self.assertEqual([Canggan(Tiangan.Wu, CangganType.MAIN), Canggan(Tiangan.Ding, CangganType.MIDDLE), Canggan(Tiangan.Xin, CangganType.SECONDARY)],
+        self.assertEqual([Canggan(Tiangan.Wu, CangganType.MAIN), Canggan(Tiangan.Xin, CangganType.MIDDLE), Canggan(Tiangan.Ding, CangganType.SECONDARY)],
                          Dizhi.Xu.canggan())
         self.assertEqual([Canggan(Tiangan.Ren, CangganType.MAIN), Canggan(
             Tiangan.Jia, CangganType.MIDDLE)], Dizhi.Hai.canggan())
@@ -60,11 +60,6 @@ class TestTiangan(unittest.TestCase):
                          Tiangan.Jia.get_shishen(Tiangan.Gui))
         self.assertEqual(Shishen.ZhengGuan,
                          Tiangan.Ren.get_shishen(Tiangan.Ji))
-        tg1 = Tiangan.Ji
-        tg2 = Tiangan.Jia
-        for i in range(10):
-            print(tg1, tg2, "(" + str(tg1.get_shishen(tg2)) + ")")
-            tg2 = tg2.next()
 
     def test_yinyang(self):
         self.assertEqual(YinYang.Yang, Tiangan.Jia.belongs_to(YinYang))

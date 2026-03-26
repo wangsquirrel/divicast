@@ -75,3 +75,25 @@ class TestEntity(unittest.TestCase):
 
             class DuplicateValue2(ValuedMultiton):
                 JUST_AN_INT = 100  # 这报错
+
+
+class EntityWithMultiAttr(ValuedMultiton):
+
+    A = (1, "a", "extra_a")
+    B = (2, "b", "extra_b")
+    C = (4, "c", "extra_c")
+    F = (3, "f", "extra_f")  # 顺序问题
+
+    d = (8, "d", "extra_d")  # 这个属性会被忽略，因为不是大写开头
+    _e = (16, "e", "extra_e")  # 这个属性会被忽略，因为以下划线开头
+
+    def __init__(self, num, chinese_name, xxx: str):
+        super().__init__(num, chinese_name)
+        self.xxx = xxx
+
+
+class TestEntityWithMultiAttr(unittest.TestCase):
+    def test_multi_attr(self):
+        self.assertEqual(EntityWithMultiAttr.A.xxx, "extra_a")
+        self.assertEqual(EntityWithMultiAttr.B.chinese_name, "b")
+        self.assertEqual(str(EntityWithMultiAttr.B), "b")

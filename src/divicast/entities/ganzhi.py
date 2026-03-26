@@ -126,12 +126,12 @@ Tiangan._BELONGS_TO = {
 }
 
 
-class CangganType(Enum):
+class CangganType(ValuedMultiton):
     """地支藏干类型"""
 
-    MAIN = "main"  # 本气
-    SECONDARY = "secondary"  # 余气
-    MIDDLE = "middle"  # 中气
+    MAIN = (0, "本气")  # 本气
+    SECONDARY = (1, "余气")  # 余气
+    MIDDLE = (2, "中气")  # 中气
 
 
 class TwelveZhangsheng(ValuedMultiton):
@@ -243,8 +243,8 @@ class Dizhi(ValuedMultiton):
             Dizhi.Zi: [Canggan(Tiangan.Gui, CangganType.MAIN)],
             Dizhi.Chou: [
                 Canggan(Tiangan.Ji, CangganType.MAIN),
-                Canggan(Tiangan.Xin, CangganType.MIDDLE),
-                Canggan(Tiangan.Gui, CangganType.SECONDARY),
+                Canggan(Tiangan.Gui, CangganType.MIDDLE),
+                Canggan(Tiangan.Xin, CangganType.SECONDARY),
             ],
             Dizhi.Yin: [
                 Canggan(Tiangan.Jia, CangganType.MAIN),
@@ -254,8 +254,8 @@ class Dizhi(ValuedMultiton):
             Dizhi.Mou: [Canggan(Tiangan.Yi, CangganType.MAIN)],
             Dizhi.Chen: [
                 Canggan(Tiangan.Wu, CangganType.MAIN),
-                Canggan(Tiangan.Gui, CangganType.MIDDLE),
-                Canggan(Tiangan.Yi, CangganType.SECONDARY),
+                Canggan(Tiangan.Yi, CangganType.MIDDLE),
+                Canggan(Tiangan.Gui, CangganType.SECONDARY),
             ],
             Dizhi.Si: [
                 Canggan(Tiangan.Bing, CangganType.MAIN),
@@ -265,8 +265,8 @@ class Dizhi(ValuedMultiton):
             Dizhi.Wu: [Canggan(Tiangan.Ding, CangganType.MAIN), Canggan(Tiangan.Ji, CangganType.MIDDLE)],
             Dizhi.Wei: [
                 Canggan(Tiangan.Ji, CangganType.MAIN),
-                Canggan(Tiangan.Yi, CangganType.MIDDLE),
-                Canggan(Tiangan.Ding, CangganType.SECONDARY),
+                Canggan(Tiangan.Ding, CangganType.MIDDLE),
+                Canggan(Tiangan.Yi, CangganType.SECONDARY),
             ],
             Dizhi.Shen: [
                 Canggan(Tiangan.Geng, CangganType.MAIN),
@@ -276,8 +276,8 @@ class Dizhi(ValuedMultiton):
             Dizhi.You: [Canggan(Tiangan.Xin, CangganType.MAIN)],
             Dizhi.Xu: [
                 Canggan(Tiangan.Wu, CangganType.MAIN),
-                Canggan(Tiangan.Ding, CangganType.MIDDLE),
-                Canggan(Tiangan.Xin, CangganType.SECONDARY),
+                Canggan(Tiangan.Xin, CangganType.MIDDLE),
+                Canggan(Tiangan.Ding, CangganType.SECONDARY),
             ],
             Dizhi.Hai: [Canggan(Tiangan.Ren, CangganType.MAIN), Canggan(Tiangan.Jia, CangganType.MIDDLE)],
         }
@@ -333,7 +333,7 @@ class Nayin(ValuedMultiton):
     LuPangTu = (3, "路旁土")
     JianFengjin = (4, "剑锋金")
     ShanTouHuo = (5, "山头火")
-    DongXiaShui = (6, "洞下水")
+    DongXiaShui = (6, "涧下水")
     ChengQiangTu = (7, "城墙土")
     BaiLajin = (8, "白蜡金")
     YangLiuMu = (9, "杨柳木")
@@ -351,7 +351,7 @@ class Nayin(ValuedMultiton):
     TianHeShui = (21, "天河水")
     DaYiTu = (22, "大驿土")
     ChaiShanJin = (23, "钗钐金")
-    SangSongMu = (24, "桑松木")
+    SangSongMu = (24, "桑柘木")
     DaXiShui = (25, "大溪水")
     ShaZhongTu = (26, "沙中土")
     TianShangHuo = (27, "天上火")

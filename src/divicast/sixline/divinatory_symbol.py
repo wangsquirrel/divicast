@@ -13,6 +13,7 @@ from divicast.entities.relative import Relative
 from divicast.entities.trigram import *
 from divicast.entities.trigram import Trigram
 from divicast.entities.wuxing import Wuxing
+from divicast.time_utils import check_naive_datetime
 
 
 class Bazi(NamedTuple):
@@ -26,6 +27,7 @@ class Bazi(NamedTuple):
 
 
 def create_bazi(dt: datetime.datetime) -> Bazi:
+    dt = check_naive_datetime(dt)
     bz = (
         solar.SolarTime.from_ymd_hms(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
         .get_lunar_hour()
@@ -246,11 +248,11 @@ class DivinatorySymbol:
         """
         创建一个六爻卦象实例。
         :param cnts: 铜钱中1的个数的列表,顺序由下到上, e.g. [3, 2, 1, 0, 1, 2]
-        :param now: 当前时间，默认为当前时间
+        :param now: 当前排盘时间，必须是调用方已归一化的 naive datetime，默认为当前本地时间
         :param bazi: 八字，默认为当前时间的八字
         """
         d = cls()
-        d._time = now or (datetime.datetime.now() + datetime.timedelta(hours=8))
+        d._time = check_naive_datetime(now) if now is not None else datetime.datetime.now()
         d._cnts = cnts or [bin(random.randrange(0, 8)).count("1") for _ in range(6)]
 
         d.bazi = bazi or create_bazi(d._time)  # 0. 装八字

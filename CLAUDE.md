@@ -1,8 +1,6 @@
-# CLAUDE.md
-
 # Repository Guidelines
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to coding agent(like claude or codex) when working with code in this repository.
 
 ## Project Overview
 
@@ -18,6 +16,9 @@ Goal: Provide all mainstream Chinese divination systems as a library, published 
 # Install dependencies with uv
 uv sync
 
+# Run python with uv to ensure correct environment
+uv run python ... # run python file or snippets
+
 # Run all tests
 uv run python -m unittest
 
@@ -27,7 +28,14 @@ uv run python -m unittest tests.test_geju
 # Run examples
 uv run python examples/sixline_example.py
 uv run python examples/bazi_example.py
+
+# Build and publish to PyPI
+
+uv cache clean # clean uv cache s
+uv build # build source distribution and wheel, outputs to dist/
+twine upload dist/* # publish to PyPI, requires ~/.pypirc with PyPI credentials
 ```
+
 
 
 ## Code Architecture
@@ -53,6 +61,7 @@ src/divicast/
     ├── birth.py              # BirthChart class with assembly & analysis
     ├── output.py             # StandardBirthChartOutput schema
     └── geju.py               # Fortune pattern (格局) calculation
+    └── ...                   # Other files for 八字排盘
 ```
 
 ### Key Patterns
@@ -70,7 +79,10 @@ src/divicast/
 
 - `base/symbol.py`:  all divination symbols are subclasses of ValuedMultiton, which provides a way to create enum-like classes with Chinese names and values.
 - `birth_chart/birth.py`: birth chart（八字） assembly and analysis logic,
+- `docs/bazi_module.md`: birth chart（八字） module design, capabilities, output structure, test coverage and edge cases.
 - `sixline/divinatory_symbol.py`: six-line（六爻） divination symbol generation and logic
+- `docs/sixline_module.md`: six-line divination module design, capabilities, output structure, test coverage and edge cases.
+
 
 
 ## Coding Style & Naming Conventions
