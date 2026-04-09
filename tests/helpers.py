@@ -19,7 +19,7 @@ def build_chart(year: str, month: str, day: str, hour: str):
         zhu.zizuo = zhu.gan.get_twelve_zhangsheng(zhu.zhi)
         zhu.kongwang = zhu.sixty_jiazi.get_kongwang()
         zhu.nayin = zhu.sixty_jiazi.get_nayin()
-        zhu.daemon = []
+        zhu.shensha = []
 
     chart.chart_analysis = analyze_chart(chart)
     return chart

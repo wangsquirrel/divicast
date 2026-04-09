@@ -300,7 +300,7 @@ def to_standard_format(birth_chart: BirthChart, target_dt: datetime) -> Standard
             earthlyBranch=earthly,
             nayin=str(zhu.nayin),
             xun=xun,
-            shensha=[str(s) for s in zhu.daemon],
+            shensha=[str(s) for s in zhu.shensha],
             forDayMastertwelveLifeStages=str(zhu.xingyun),
             forPillarStemtwelveLifeStages=str(zhu.zizuo),
             kongwang=",".join([str(s) for s in zhu.kongwang]),
@@ -663,7 +663,7 @@ def _get_lunar_date_str(birth_chart: BirthChart) -> Optional[str]:
 def _collect_chart_shensha(birth_chart: BirthChart) -> List[str]:
     result: list[str] = []
     for zhu in [birth_chart.yearzhu, birth_chart.monthzhu, birth_chart.dayzhu, birth_chart.bihourzhu]:
-        for s in zhu.daemon:
+        for s in zhu.shensha:
             name = str(s)
             if name not in result:
                 result.append(name)

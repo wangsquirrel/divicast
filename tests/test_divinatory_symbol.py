@@ -31,6 +31,15 @@ class TestHexagram(unittest.TestCase):
 
 
 class TestDivinatorySymbol(unittest.TestCase):
+    def test_pure_palace_hexagrams_cover_all_relatives_without_fushen_recursion(self):
+        for trigram in Trigram.all():
+            cnts = [1 if line.num == 1 else 2 for line in trigram.lines] * 2
+            d = DivinatorySymbol.create(cnts, datetime.datetime(2024, 6, 11, 14, 5, 0))
+
+            self.assertEqual(d.origin_hexagram.belongs_to_trigram(), trigram)
+            self.assertEqual(set(Relative.all()), {line.origin.relative for line in d.lines})
+            self.assertTrue(all(line.origin.fushen is None for line in d.lines))
+
     def test_variant_outside_trigram(self):
         d = DivinatorySymbol.create([1, 3, 0, 1, 0, 0], datetime.datetime(2024, 6, 11, 14, 5, 0))
         """

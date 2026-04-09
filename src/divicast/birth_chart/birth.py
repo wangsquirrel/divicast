@@ -35,6 +35,7 @@ class ZhuInfo(object):
         self.gan = Tiangan[ganzhi[0]]
         self.zhi = Dizhi[ganzhi[1]]
         self.sixty_jiazi = SixtyJiazi(self.gan, self.zhi)
+        self.shensha = []
 
 
 class BirthChart(object):
@@ -154,11 +155,11 @@ class BirthChart(object):
             zhu.zizuo = zhu.gan.get_twelve_zhangsheng(zhu.zhi)
             zhu.kongwang = zhu.sixty_jiazi.get_kongwang()
             zhu.nayin = zhu.sixty_jiazi.get_nayin()
-            zhu.daemon = []
+            zhu.shensha = []
 
         shensha_by_pillar = build_pillar_shensha(self._bazi, self._gender)
-        for zhu, daemon in zip([self.yearzhu, self.monthzhu, self.dayzhu, self.bihourzhu], shensha_by_pillar):
-            zhu.daemon = daemon
+        for zhu, shensha in zip([self.yearzhu, self.monthzhu, self.dayzhu, self.bihourzhu], shensha_by_pillar):
+            zhu.shensha = shensha
 
     def analyze(self) -> None:
         """计算并填充统一分析结果。当前分析层以启发式加权与规则匹配为主。"""

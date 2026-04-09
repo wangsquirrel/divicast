@@ -2,7 +2,6 @@
 __pycache__
 .mypy_cache
 .devcontainer/
-.github
 .venv/
 .qodo/
 .agents/

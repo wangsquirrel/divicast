@@ -17,10 +17,13 @@ Goal: Provide all mainstream Chinese divination systems as a library, published 
 uv sync
 
 # Run python with uv to ensure correct environment
-uv run python ... # run python file or snippets
+uv run python ... # run python file or snippets. Never use plain python/python3 in this repository
 
 # Run all tests
 uv run python -m unittest
+
+# CI uses the same unit test command after syncing the test group
+uv sync --group test && uv run python -m unittest
 
 # Run a specific test file
 uv run python -m unittest tests.test_geju
@@ -47,8 +50,7 @@ src/divicast/
 ├── base/
 │   └── symbol.py         # Base ValuedMultiton class for enum-like divination symbols
 ├── entities/             # Core data models and logic for all divination systems
-│   ├── tiangan.py        # Heavenly Stems (天干), Ten Gods (十神)
-│   ├── ganzhi.py         # Earthly Branches (地支), Nayin (纳音), Twelve Zhangsheng
+│   ├── ganzhi.py         # Heavenly Stems (天干), Earthly Branches (地支), Ten Gods (十神), Nayin (纳音), Twelve Zhangsheng
 │   ├── wuxing.py         # Five Elements (五行), YinYang
 │   ├── trigram.py        # Eight Trigrams (八卦)
 │   ├── daemon.py         # Gods/Deities (神煞)
@@ -68,6 +70,7 @@ src/divicast/
 
 - **ValuedMultiton**: Base class in `base/symbol.py` for creating enum-like divination symbols with Chinese names
 - **BirthChart.create()DivinatorySymbol.create()/**: Factory method that runs assemble() → analyze()
+- Entity symbol classes must keep a single canonical implementation. Do not keep duplicate `ValuedMultiton` subclasses in multiple modules.
 
 ### Data Models
 

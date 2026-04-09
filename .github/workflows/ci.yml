@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --group test
+
+      - name: Run unit tests
+        run: uv run python -m unittest
+
+      - name: Run sixline examples
+        run: uv run python examples/sixline_example.py
+
+      - name: Run bazi examples
+        run: uv run python examples/bazi_example.py

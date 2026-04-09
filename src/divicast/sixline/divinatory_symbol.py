@@ -259,8 +259,8 @@ class DivinatorySymbol:
         d._roll(d._cnts)  # 1. 摇卦
         d._assemble_tiangan()  # 2. 装天干
         d._assemble_dizhi()  # 3. 装地支
-        d._assenble_shiying()  # 4. 安世应
-        d._assenble_relative()  # 5. 装六亲
+        d._assemble_shiying()  # 4. 安世应
+        d._assemble_relative()  # 5. 装六亲
         d._assemble_liushen(d.bazi)  # 6. 装六神, 和时间有关
         d.kongwang = create_kongwang(d.bazi.day)  # 7. 装空亡, 和时间有关
         d._assemble_daemon()  # 8. 装神煞, 和时间有关
@@ -343,7 +343,7 @@ class DivinatorySymbol:
             self.lines[i].origin.wuxing = self.lines[i].origin.zhi.belongs_to(Wuxing)
             self.lines[i].variant.wuxing = self.lines[i].variant.zhi.belongs_to(Wuxing)
 
-    def _assenble_shiying(self):
+    def _assemble_shiying(self):
         """
         安世应
         """
@@ -374,7 +374,7 @@ class DivinatorySymbol:
         self.lines[seq].origin.is_subject = True
         self.lines[(seq + 3) % 6].origin.is_object = True
 
-    def _assenble_relative(self):
+    def _assemble_relative(self):
 
         for i in range(0, 6):
             self.lines[i].origin.relative = create_relative(
