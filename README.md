@@ -1,4 +1,4 @@
-# 玄学排盘库 [![License](https://img.shields.io/badge/license-MIT-4EB1BA.svg?style=flat-square)](https://github.com/wangsquirrel/divicast/blob/main/LICENSE)
+# 玄学排盘库 [![CI](https://github.com/wangsquirrel/divicast/actions/workflows/ci.yml/badge.svg)](https://github.com/wangsquirrel/divicast/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/license-MIT-4EB1BA.svg?style=flat-square)](https://github.com/wangsquirrel/divicast/blob/main/LICENSE)
 
 本库用于六爻排盘（六爻预测）和八字排盘（八字预测），提供了基础的六爻、八字相关实体、符号、五行、天干地支等数据结构和推演逻辑，适合用于命理、易学、占卜等相关应用的开发。致力于面向未来，面向AI
 
