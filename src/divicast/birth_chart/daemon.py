@@ -5,7 +5,9 @@
 from tyme4py import enums, lunar  # type: ignore
 
 from ..entities.daemon import Daemon
+from ..entities.ganzhi import Tiangan
 from ..entities.misc import Gender
+from ..entities.wuxing import YinYang
 
 
 def build_pillar_shensha(bazi: lunar.EightChar, gender: Gender) -> list[list[Daemon]]:
@@ -29,7 +31,8 @@ def build_pillar_shensha(bazi: lunar.EightChar, gender: Gender) -> list[list[Dae
     year_xun = XUN[year_gz]
     day_xun = XUN[day_gz]
     year_nayin_wuxing = NAYIN_WUXING[year_gz]
-    gender_num = 1 if gender == Gender.Male else 0
+    year_yinyang = Tiangan[year_gan].belongs_to(YinYang)
+    gender_yinyang = gender.belongs_to(YinYang)
 
     gods = [set() for _ in range(4)]
 
@@ -72,7 +75,7 @@ def build_pillar_shensha(bazi: lunar.EightChar, gender: Gender) -> list[list[Dae
         add(i, grab_hongluan(year_zhi, zhi))
         add(i, grab_tianxi(year_zhi, zhi))
         add(i, grab_goujiaosha(year_zhi, zhi))
-        add(i, grab_yuanchen(GAN_YINYANG[year_gan], year_zhi, gender_num, zhi))
+        add(i, grab_yuanchen(year_yinyang, year_zhi, gender_yinyang, zhi))
         add(i, grab_sangmen(year_zhi, zhi))
         add(i, grab_diaoke(year_zhi, zhi))
         add(i, grab_pima(year_zhi, zhi))
@@ -262,8 +265,6 @@ XUN = {
     "壬戌": "甲寅",
     "癸亥": "甲寅",
 }
-
-GAN_YINYANG = {"甲": 1, "乙": 0, "丙": 1, "丁": 0, "戊": 1, "己": 0, "庚": 1, "辛": 0, "壬": 1, "癸": 0}
 
 TIANYIGUIREN_MAP = {
     "甲": "丑未",
@@ -1211,8 +1212,8 @@ def grab_shiedabai(day_ganzhi: str) -> str | None:
     return None
 
 
-def grab_yuanchen(year_yinyang: int, year_zhi: str, gender_num: int, rest_zhi: str) -> str | None:
-    key = "同" if year_yinyang == gender_num else "异"
+def grab_yuanchen(year_yinyang: YinYang, year_zhi: str, gender_yinyang: YinYang, rest_zhi: str) -> str | None:
+    key = "同" if year_yinyang == gender_yinyang else "异"
     if YUANCHEN_MAP[key][year_zhi] == rest_zhi:
         return "元辰"
     return None

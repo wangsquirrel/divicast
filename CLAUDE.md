@@ -87,7 +87,6 @@ src/divicast/
 - `docs/sixline_module.md`: six-line divination module design, capabilities, output structure, test coverage and edge cases.
 
 
-
 ## Coding Style & Naming Conventions
 - Python 3.12+; follow standard PEP 8 with 4-space indentation.
 - Use descriptive class names in `CapWords` and module/file names in `snake_case`.
@@ -95,4 +94,6 @@ src/divicast/
 
 ## Security & Configuration Tips
 - Dependencies are defined in `pyproject.toml`; keep versions compatible with Python 3.12+.
+- `tyme4py` is pinned because 八字 golden tests depend on exact calendar/solar-term boundary behavior; update fixtures and boundary tests deliberately when changing it.
+- Runtime package version is read from package metadata in `src/divicast/__init__.py`; update `pyproject.toml` rather than hard-coding `__version__`.
 - Avoid editing schema/data files unless updating corresponding tests.

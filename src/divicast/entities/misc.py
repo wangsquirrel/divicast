@@ -1,4 +1,5 @@
 from divicast.base.symbol import ValuedMultiton
+from divicast.entities.wuxing import YinYang
 
 
 class Gender(ValuedMultiton):
@@ -6,3 +7,11 @@ class Gender(ValuedMultiton):
 
     Female = (0, "女")
     Male = (1, "男")
+
+
+Gender._BELONGS_TO = {
+    YinYang: {
+        Gender.Female: YinYang.Yin,
+        Gender.Male: YinYang.Yang,
+    },
+}

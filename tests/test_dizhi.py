@@ -3,6 +3,7 @@ import unittest
 from divicast.entities.ganzhi import (Canggan, CangganType, Dizhi, Nayin,
                                       Shishen, SixtyJiazi, Tiangan,
                                       TwelveZhangsheng)
+from divicast.entities.misc import Gender
 from divicast.entities.wuxing import YinYang
 
 
@@ -103,3 +104,9 @@ class TestTiangan(unittest.TestCase):
             Tiangan.Gui, Dizhi.Hai).get_nayin())
         self.assertEqual(Nayin.DaHaiShui, SixtyJiazi(
             Tiangan.Ren, Dizhi.Xu).get_nayin())
+
+
+class TestGender(unittest.TestCase):
+    def test_yinyang(self):
+        self.assertEqual(YinYang.Yin, Gender.Female.belongs_to(YinYang))
+        self.assertEqual(YinYang.Yang, Gender.Male.belongs_to(YinYang))

@@ -100,6 +100,7 @@ class TestBirthChartBaziMcpRegression(unittest.TestCase):
         self.assertTrue(FIXTURE_PATH.exists())
         self.assertEqual("cantian-ai/bazi-mcp", self.fixture["source"]["repo"])
         self.assertEqual("dev", self.fixture["source"]["branch"])
+        self.assertEqual("1.3.4", self.fixture["source"]["tyme4py_version"])
         self.assertEqual(2, self.fixture["source"]["eight_char_provider_sect"])
         self.assertEqual("buildBazi", self.fixture["source"]["seconds_preserved_via"])
         self.assertEqual(self.fixture["sample_count"], len(self.samples))

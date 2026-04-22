@@ -3,6 +3,7 @@
     "repo": "cantian-ai/bazi-mcp",
     "branch": "dev",
     "commit": "61b9012759fb804859a980e75183ec0551e6df58",
+    "tyme4py_version": "1.3.4",
     "eight_char_provider_sect": 2,
     "seconds_preserved_via": "buildBazi"
   },

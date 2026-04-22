@@ -190,6 +190,8 @@ class Relations(BaseModel):
 class WuxingScoreOutput(BaseModel):
     count: int = Field(..., description="五行出现次数")
     score: float = Field(..., description="五行加权分数")
+    percentage: float = Field(..., description="五行加权占比百分数")
+    balance_label: str = Field(..., description="五行相对分布标签")
 
 
 class WuxingAnalysisOutput(BaseModel):
@@ -471,13 +473,26 @@ def plain_draw_chart(birth_chart: BirthChart, target_dt: datetime | None = None)
         for row in rows[1:]:
             print(f"{indent}{' ' * (len(label) + 2)} {style(row, color)}")
 
-    def draw_bar(label: str, score: float, max_score: float, count: int | None = None, color: str = C_INFO) -> None:
+    def draw_bar(
+        label: str,
+        score: float,
+        max_score: float,
+        count: int | None = None,
+        percentage: float | None = None,
+        balance_label: str | None = None,
+        color: str = C_INFO,
+    ) -> None:
         width = 24
         ratio = 0.0 if max_score <= 0 else score / max_score
         filled = int(ratio * width)
         bar = "█" * filled + "░" * (width - filled)
         count_text = "" if count is None else f"  数量 {count}"
-        print(f"  {style(label, BOLD, color):<10} {style(bar, color)}  {score:>5.2f}{count_text}")
+        percentage_text = "" if percentage is None else f"  {percentage:>5.1f}%"
+        label_text = "" if balance_label is None else f"  {balance_label}"
+        print(
+            f"  {style(label, BOLD, color):<10} {style(bar, color)}  "
+            f"{score:>5.2f}{percentage_text}{count_text}{label_text}"
+        )
 
     def join_non_empty(values: list[str | None]) -> str:
         return " / ".join([value for value in values if value])
@@ -545,7 +560,15 @@ def plain_draw_chart(birth_chart: BirthChart, target_dt: datetime | None = None)
     max_wuxing_score = max((item.score for item in wuxing_items.values()), default=0.0)
     for wuxing in ["木", "火", "土", "金", "水"]:
         item = wuxing_items[wuxing]
-        draw_bar(wuxing, item.score, max_wuxing_score, count=item.count, color=C_ACCENT)
+        draw_bar(
+            wuxing,
+            item.score,
+            max_wuxing_score,
+            count=item.count,
+            percentage=item.percentage,
+            balance_label=item.balance_label,
+            color=C_ACCENT,
+        )
     line("月令五行 / 最旺五行", f"{analysis.wuxing.month_zhi_wuxing} / {analysis.wuxing.strongest}")
 
     subheader("旺衰")
@@ -675,7 +698,7 @@ def _pillar_tengod_element_yinyang(
 ) -> tuple[Optional[str], Optional[str], Optional[str]]:
     if not pillar or len(pillar) < 2:
         return None, None, None
-    gan = Tiangan.from_chinese_name(pillar[0])
+    gan = Tiangan[pillar[0]]
     tengod = str(birth_chart.dayzhu.gan.get_shishen(gan))
     element = str(gan.belongs_to(Wuxing))
     yinyang = str(gan.belongs_to(YinYang))
@@ -896,8 +919,14 @@ def _build_relation_index_item_output(item) -> RelationIndexItem:
 
 
 def _build_chart_analysis_output(analysis: InternalChartAnalysis) -> ChartAnalysisOutput:
+    total_score = analysis.wuxing.total_score
     wuxing_items = {
-        str(wuxing): WuxingScoreOutput(count=item.count, score=round(item.score, 3))
+        str(wuxing): WuxingScoreOutput(
+            count=item.count,
+            score=round(item.score, 3),
+            percentage=round(_wuxing_percentage(item.score, total_score), 2),
+            balance_label=_wuxing_balance_label(item.score, total_score),
+        )
         for wuxing, item in analysis.wuxing.items.items()
     }
     strength = analysis.strength
@@ -986,3 +1015,22 @@ def _build_chart_analysis_output(analysis: InternalChartAnalysis) -> ChartAnalys
             ),
         ),
     )
+
+
+def _wuxing_percentage(score: float, total_score: float) -> float:
+    if total_score <= 0:
+        return 0.0
+    return score / total_score * 100
+
+
+def _wuxing_balance_label(score: float, total_score: float) -> str:
+    percentage = _wuxing_percentage(score, total_score)
+    if percentage < 12:
+        return "明显偏弱"
+    if percentage < 16:
+        return "偏弱"
+    if percentage <= 24:
+        return "均衡"
+    if percentage < 30:
+        return "偏旺"
+    return "明显偏旺"

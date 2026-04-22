@@ -149,6 +149,8 @@ DivinatorySymbol.create(cnts=None, now=None, bazi=None)
 - 灾煞
 - 谋星
 
+六爻神煞取法采用 `sixline/divinatory_symbol.py` 中的固定规则；不同流派对天乙贵人、天医等可能存在条件变体，当前暂未提供流派配置或变体切换。
+
 此外，还实现了：
 
 - 卦身

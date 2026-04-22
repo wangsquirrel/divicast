@@ -39,7 +39,7 @@ test = [
 requires-dist = [
     { name = "pydantic", specifier = ">=2.11.9" },
     { name = "rich", specifier = "==14.0.0" },
-    { name = "tyme4py", specifier = ">=1.3.4" },
+    { name = "tyme4py", specifier = "==1.3.4" },
 ]
 
 [package.metadata.requires-dev]
