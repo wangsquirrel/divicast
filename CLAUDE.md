@@ -35,8 +35,16 @@ uv run python examples/bazi_example.py
 # Build and publish to PyPI
 
 uv cache clean # clean uv cache s
+uv sync --group test # refresh uv.lock after pyproject.toml changes and install test deps
+uv run python -m unittest
 uv build # build source distribution and wheel, outputs to dist/
 twine upload dist/* # publish to PyPI, requires ~/.pypirc with PyPI credentials
+
+# GitHub Actions PyPI publishing
+# .github/workflows/publish.yml publishes tagged releases like v0.2.2.
+# Keep it aligned with CI: uv sync --group test, uv run python -m unittest,
+# both examples, then uv build. PyPI should use Trusted Publishing for
+# the pypi environment instead of storing an API token secret in GitHub.
 ```
 
 

@@ -1,6 +1,6 @@
 [project]
 name = "divicast"
-version = "0.2.2"
+version = "0.2.3"
 description = "This is a metaphysical chart library, including six line"
 readme = "README.md"
 authors = [
