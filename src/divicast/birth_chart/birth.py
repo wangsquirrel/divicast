@@ -2,6 +2,7 @@ import datetime
 from typing import Self
 
 from tyme4py import eightchar, enums, lunar, solar
+from tyme4py.eightchar.provider import EightCharProvider
 from tyme4py.eightchar.provider.impl import DefaultEightCharProvider, LunarSect2EightCharProvider
 
 from divicast.entities.trigram import Trigram  # type: ignore
@@ -70,12 +71,13 @@ class BirthChart(object):
     chart_analysis: ChartAnalysis
 
     @classmethod
-    def get_eightchar_provider(cls, calc_rules: dict[str, str] | None = None):
+    def get_eightchar_provider(cls, calc_rules: dict[str, str] | None = None) -> EightCharProvider:
         """
-        八字计算规则选择，主要影响时柱的计算。默认使用 "lunar_sect2_day_same"，即以农历日期为基础，时柱与日柱天干相同。
+        返回本次调用的八字计算器，规则主要区分晚子时的日柱归属。
         可选规则：
-        - "default_next_day": 以公历日期为基础，时柱天干
-        - "lunar_sect2_day_same": 以农历日期为基础，时柱天干与日柱相同（默认）
+        - "default_next_day": 23:00-23:59 的日柱算次日。
+        - "lunar_sect2_day_same": 23:00-23:59 的日柱算当天（八字默认）。
+        时柱沿用对应 Tyme 算法，不表示时柱与日柱的天干相同。
         """
         rules = calc_rules or {}
         rule = rules.get("zi_hour", "lunar_sect2_day_same")
@@ -87,7 +89,7 @@ class BirthChart(object):
         return providers[rule]
 
     @classmethod
-    def calc_eightchar(cls, lunar_hour: lunar.LunarHour, calc_rules: dict[str, str] | None = None):
+    def calc_eightchar(cls, lunar_hour: lunar.LunarHour, calc_rules: dict[str, str] | None = None) -> eightchar.EightChar:
         """按本次调用指定口径计算八字，不依赖 tyme4py 的全局 provider。"""
         return cls.get_eightchar_provider(calc_rules).get_eight_char(lunar_hour)
 

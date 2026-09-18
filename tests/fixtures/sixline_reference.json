@@ -1,0 +1,563 @@
+{
+  "sources": [
+    "https://zh.wikisource.org/wiki/增刪卜易/3/八卦各宮全圖",
+    "https://www.shidianguji.com/book/AMNL0060/chapter/1ma05akk4w74j"
+  ],
+  "ordering": "initial_to_top",
+  "hexagrams": [
+    {
+      "name": "乾",
+      "bits": "111111",
+      "palace": "乾",
+      "shi": 6,
+      "ying": 3
+    },
+    {
+      "name": "姤",
+      "bits": "011111",
+      "palace": "乾",
+      "shi": 1,
+      "ying": 4
+    },
+    {
+      "name": "遁",
+      "bits": "001111",
+      "palace": "乾",
+      "shi": 2,
+      "ying": 5
+    },
+    {
+      "name": "否",
+      "bits": "000111",
+      "palace": "乾",
+      "shi": 3,
+      "ying": 6
+    },
+    {
+      "name": "观",
+      "bits": "000011",
+      "palace": "乾",
+      "shi": 4,
+      "ying": 1
+    },
+    {
+      "name": "剥",
+      "bits": "000001",
+      "palace": "乾",
+      "shi": 5,
+      "ying": 2
+    },
+    {
+      "name": "晋",
+      "bits": "000101",
+      "palace": "乾",
+      "shi": 4,
+      "ying": 1
+    },
+    {
+      "name": "大有",
+      "bits": "111101",
+      "palace": "乾",
+      "shi": 3,
+      "ying": 6
+    },
+    {
+      "name": "兑",
+      "bits": "110110",
+      "palace": "兑",
+      "shi": 6,
+      "ying": 3
+    },
+    {
+      "name": "困",
+      "bits": "010110",
+      "palace": "兑",
+      "shi": 1,
+      "ying": 4
+    },
+    {
+      "name": "萃",
+      "bits": "000110",
+      "palace": "兑",
+      "shi": 2,
+      "ying": 5
+    },
+    {
+      "name": "咸",
+      "bits": "001110",
+      "palace": "兑",
+      "shi": 3,
+      "ying": 6
+    },
+    {
+      "name": "蹇",
+      "bits": "001010",
+      "palace": "兑",
+      "shi": 4,
+      "ying": 1
+    },
+    {
+      "name": "谦",
+      "bits": "001000",
+      "palace": "兑",
+      "shi": 5,
+      "ying": 2
+    },
+    {
+      "name": "小过",
+      "bits": "001100",
+      "palace": "兑",
+      "shi": 4,
+      "ying": 1
+    },
+    {
+      "name": "归妹",
+      "bits": "110100",
+      "palace": "兑",
+      "shi": 3,
+      "ying": 6
+    },
+    {
+      "name": "离",
+      "bits": "101101",
+      "palace": "离",
+      "shi": 6,
+      "ying": 3
+    },
+    {
+      "name": "旅",
+      "bits": "001101",
+      "palace": "离",
+      "shi": 1,
+      "ying": 4
+    },
+    {
+      "name": "鼎",
+      "bits": "011101",
+      "palace": "离",
+      "shi": 2,
+      "ying": 5
+    },
+    {
+      "name": "未济",
+      "bits": "010101",
+      "palace": "离",
+      "shi": 3,
+      "ying": 6
+    },
+    {
+      "name": "蒙",
+      "bits": "010001",
+      "palace": "离",
+      "shi": 4,
+      "ying": 1
+    },
+    {
+      "name": "涣",
+      "bits": "010011",
+      "palace": "离",
+      "shi": 5,
+      "ying": 2
+    },
+    {
+      "name": "讼",
+      "bits": "010111",
+      "palace": "离",
+      "shi": 4,
+      "ying": 1
+    },
+    {
+      "name": "同人",
+      "bits": "101111",
+      "palace": "离",
+      "shi": 3,
+      "ying": 6
+    },
+    {
+      "name": "震",
+      "bits": "100100",
+      "palace": "震",
+      "shi": 6,
+      "ying": 3
+    },
+    {
+      "name": "豫",
+      "bits": "000100",
+      "palace": "震",
+      "shi": 1,
+      "ying": 4
+    },
+    {
+      "name": "解",
+      "bits": "010100",
+      "palace": "震",
+      "shi": 2,
+      "ying": 5
+    },
+    {
+      "name": "恒",
+      "bits": "011100",
+      "palace": "震",
+      "shi": 3,
+      "ying": 6
+    },
+    {
+      "name": "升",
+      "bits": "011000",
+      "palace": "震",
+      "shi": 4,
+      "ying": 1
+    },
+    {
+      "name": "井",
+      "bits": "011010",
+      "palace": "震",
+      "shi": 5,
+      "ying": 2
+    },
+    {
+      "name": "大过",
+      "bits": "011110",
+      "palace": "震",
+      "shi": 4,
+      "ying": 1
+    },
+    {
+      "name": "随",
+      "bits": "100110",
+      "palace": "震",
+      "shi": 3,
+      "ying": 6
+    },
+    {
+      "name": "巽",
+      "bits": "011011",
+      "palace": "巽",
+      "shi": 6,
+      "ying": 3
+    },
+    {
+      "name": "小畜",
+      "bits": "111011",
+      "palace": "巽",
+      "shi": 1,
+      "ying": 4
+    },
+    {
+      "name": "家人",
+      "bits": "101011",
+      "palace": "巽",
+      "shi": 2,
+      "ying": 5
+    },
+    {
+      "name": "益",
+      "bits": "100011",
+      "palace": "巽",
+      "shi": 3,
+      "ying": 6
+    },
+    {
+      "name": "无妄",
+      "bits": "100111",
+      "palace": "巽",
+      "shi": 4,
+      "ying": 1
+    },
+    {
+      "name": "噬嗑",
+      "bits": "100101",
+      "palace": "巽",
+      "shi": 5,
+      "ying": 2
+    },
+    {
+      "name": "颐",
+      "bits": "100001",
+      "palace": "巽",
+      "shi": 4,
+      "ying": 1
+    },
+    {
+      "name": "蛊",
+      "bits": "011001",
+      "palace": "巽",
+      "shi": 3,
+      "ying": 6
+    },
+    {
+      "name": "坎",
+      "bits": "010010",
+      "palace": "坎",
+      "shi": 6,
+      "ying": 3
+    },
+    {
+      "name": "节",
+      "bits": "110010",
+      "palace": "坎",
+      "shi": 1,
+      "ying": 4
+    },
+    {
+      "name": "屯",
+      "bits": "100010",
+      "palace": "坎",
+      "shi": 2,
+      "ying": 5
+    },
+    {
+      "name": "既济",
+      "bits": "101010",
+      "palace": "坎",
+      "shi": 3,
+      "ying": 6
+    },
+    {
+      "name": "革",
+      "bits": "101110",
+      "palace": "坎",
+      "shi": 4,
+      "ying": 1
+    },
+    {
+      "name": "丰",
+      "bits": "101100",
+      "palace": "坎",
+      "shi": 5,
+      "ying": 2
+    },
+    {
+      "name": "明夷",
+      "bits": "101000",
+      "palace": "坎",
+      "shi": 4,
+      "ying": 1
+    },
+    {
+      "name": "师",
+      "bits": "010000",
+      "palace": "坎",
+      "shi": 3,
+      "ying": 6
+    },
+    {
+      "name": "艮",
+      "bits": "001001",
+      "palace": "艮",
+      "shi": 6,
+      "ying": 3
+    },
+    {
+      "name": "贲",
+      "bits": "101001",
+      "palace": "艮",
+      "shi": 1,
+      "ying": 4
+    },
+    {
+      "name": "大畜",
+      "bits": "111001",
+      "palace": "艮",
+      "shi": 2,
+      "ying": 5
+    },
+    {
+      "name": "损",
+      "bits": "110001",
+      "palace": "艮",
+      "shi": 3,
+      "ying": 6
+    },
+    {
+      "name": "睽",
+      "bits": "110101",
+      "palace": "艮",
+      "shi": 4,
+      "ying": 1
+    },
+    {
+      "name": "履",
+      "bits": "110111",
+      "palace": "艮",
+      "shi": 5,
+      "ying": 2
+    },
+    {
+      "name": "中孚",
+      "bits": "110011",
+      "palace": "艮",
+      "shi": 4,
+      "ying": 1
+    },
+    {
+      "name": "渐",
+      "bits": "001011",
+      "palace": "艮",
+      "shi": 3,
+      "ying": 6
+    },
+    {
+      "name": "坤",
+      "bits": "000000",
+      "palace": "坤",
+      "shi": 6,
+      "ying": 3
+    },
+    {
+      "name": "复",
+      "bits": "100000",
+      "palace": "坤",
+      "shi": 1,
+      "ying": 4
+    },
+    {
+      "name": "临",
+      "bits": "110000",
+      "palace": "坤",
+      "shi": 2,
+      "ying": 5
+    },
+    {
+      "name": "泰",
+      "bits": "111000",
+      "palace": "坤",
+      "shi": 3,
+      "ying": 6
+    },
+    {
+      "name": "大壮",
+      "bits": "111100",
+      "palace": "坤",
+      "shi": 4,
+      "ying": 1
+    },
+    {
+      "name": "夬",
+      "bits": "111110",
+      "palace": "坤",
+      "shi": 5,
+      "ying": 2
+    },
+    {
+      "name": "需",
+      "bits": "111010",
+      "palace": "坤",
+      "shi": 4,
+      "ying": 1
+    },
+    {
+      "name": "比",
+      "bits": "000010",
+      "palace": "坤",
+      "shi": 3,
+      "ying": 6
+    }
+  ],
+  "pure_najia": {
+    "乾": {
+      "gan": "甲甲甲壬壬壬",
+      "zhi": "子寅辰午申戌",
+      "wuxing": "水木土火金土",
+      "relatives": [
+        "子孙",
+        "妻财",
+        "父母",
+        "官鬼",
+        "兄弟",
+        "父母"
+      ]
+    },
+    "兑": {
+      "gan": "丁丁丁丁丁丁",
+      "zhi": "巳卯丑亥酉未",
+      "wuxing": "火木土水金土",
+      "relatives": [
+        "官鬼",
+        "妻财",
+        "父母",
+        "子孙",
+        "兄弟",
+        "父母"
+      ]
+    },
+    "离": {
+      "gan": "己己己己己己",
+      "zhi": "卯丑亥酉未巳",
+      "wuxing": "木土水金土火",
+      "relatives": [
+        "父母",
+        "子孙",
+        "官鬼",
+        "妻财",
+        "子孙",
+        "兄弟"
+      ]
+    },
+    "震": {
+      "gan": "庚庚庚庚庚庚",
+      "zhi": "子寅辰午申戌",
+      "wuxing": "水木土火金土",
+      "relatives": [
+        "父母",
+        "兄弟",
+        "妻财",
+        "子孙",
+        "官鬼",
+        "妻财"
+      ]
+    },
+    "巽": {
+      "gan": "辛辛辛辛辛辛",
+      "zhi": "丑亥酉未巳卯",
+      "wuxing": "土水金土火木",
+      "relatives": [
+        "妻财",
+        "父母",
+        "官鬼",
+        "妻财",
+        "子孙",
+        "兄弟"
+      ]
+    },
+    "坎": {
+      "gan": "戊戊戊戊戊戊",
+      "zhi": "寅辰午申戌子",
+      "wuxing": "木土火金土水",
+      "relatives": [
+        "子孙",
+        "官鬼",
+        "妻财",
+        "父母",
+        "官鬼",
+        "兄弟"
+      ]
+    },
+    "艮": {
+      "gan": "丙丙丙丙丙丙",
+      "zhi": "辰午申戌子寅",
+      "wuxing": "土火金土水木",
+      "relatives": [
+        "兄弟",
+        "父母",
+        "子孙",
+        "兄弟",
+        "妻财",
+        "官鬼"
+      ]
+    },
+    "坤": {
+      "gan": "乙乙乙癸癸癸",
+      "zhi": "未巳卯丑亥酉",
+      "wuxing": "土火木土水金",
+      "relatives": [
+        "兄弟",
+        "父母",
+        "官鬼",
+        "兄弟",
+        "妻财",
+        "子孙"
+      ]
+    }
+  }
+}

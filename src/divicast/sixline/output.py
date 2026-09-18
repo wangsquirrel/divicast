@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Annotated, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 from rich.columns import Columns
@@ -8,6 +8,8 @@ from rich.table import Table
 from rich.text import Text
 
 from divicast.entities.trigram import Hexagram
+from divicast.time_utils import CalendarConvention
+from divicast.sixline.casting import CastingInput, check_legacy_code
 from divicast.sixline.divinatory_symbol import DivinatorySymbol
 
 
@@ -37,8 +39,8 @@ class HexagramYao(BaseModel):
     line: str = Field(description="爻象（⚊阳爻，⚋阴爻）")
     is_subject: Optional[bool] = Field(None, description="是否为世爻")
     is_object: Optional[bool] = Field(None, description="是否为应爻")
-    is_changed: Optional[bool] = Field(None, description="是否为动爻")
-    fushen: Optional[Fushen] = Field(None, description="该爻下的伏神，若无伏神则为null")
+    is_changed: Optional[bool] = Field(None, description="是否为摇卦所得的明动爻；不表示日冲暗动，变卦同位不设置此值")
+    fushen: Optional[Fushen] = Field(None, description="该爻下的伏神；无则为null，exclude_none序列化时省略")
 
 
 class YaoDetail(BaseModel):
@@ -46,22 +48,23 @@ class YaoDetail(BaseModel):
 
     liushen: str = Field(description="爻所临的六神（青龙、朱雀、勾陈、腾蛇、白虎、玄武）")
     origin: HexagramYao = Field(description="本卦爻的详细信息")
-    variant: HexagramYao = Field(description="变卦爻的详细信息")
+    variant: HexagramYao = Field(description="完整变卦同一爻位的信息；仅origin.is_changed为true时才是实际化出之爻")
 
 
 class StandardDivinatorySymbolOutput(BaseModel):
     """六爻排盘的完整结果"""
 
-    yaogua: List[int] = Field(
-        description="摇卦的原始记录数组，表示6次摇卦的结果，从初爻到上爻排列，对解卦无用处，仅供参考",
-        json_schema_extra={
-            "items": {
-                "description": "单次摇卦的结果，3枚硬币中出现有字面的次数",
-                "type": "integer",
-                "enum": [0, 1, 2, 3],
-            }
-        }
+    yaogua: List[Annotated[int, Field(strict=True, ge=0, le=3)]] = Field(
+        min_length=6,
+        max_length=6,
+        description="旧版 divicast 编码，初爻到上爻：0老阴、1少阳、2少阴、3老阳；不是传统字面枚数",
     )
+    # Optional when reading old JSON; new factory output always fills these fields.
+    line_values: List[Literal[6, 7, 8, 9]] | None = Field(
+        default=None, min_length=6, max_length=6, description="标准爻值，初爻到上爻：6老阴、7少阳、8少阴、9老阳"
+    )
+    casting: CastingInput | None = Field(default=None, description="输入口径与原始记录；旧JSON缺失时不推断来源")
+    calendar: CalendarConvention | None = Field(default=None, description="本次实际采用的历法口径或显式四柱来源")
     time: str = Field(description="起卦的详细时间，格式：YYYY-MM-DD HH:MM:SS")
     bazi: str = Field(description="起卦时间的干支（四柱）")
     yuejian: str = Field(description="月建，月柱的地支")
@@ -84,17 +87,17 @@ class StandardDivinatorySymbolOutput(BaseModel):
     yao_6: YaoDetail = Field(description="上爻（最上爻）详细信息")
 
 
-def rich_draw_divination(ds: DivinatorySymbol):
+def rich_draw_divination(ds: DivinatorySymbol) -> None:
     """
     接收一个 DivinatorySymbol 对象并使用 Rich 将其精美地打印到终端。
     """
     console = Console()
 
     # 1. 顶部信息区块
-    coin_result_str = " ".join([cnt_to_str(c) for c in ds._cnts])
+    coin_result_str = casting_to_str(ds)
 
     info_text = Text()
-    info_text.append("摇卦结果: ", style="bold")
+    info_text.append("起卦输入: ", style="bold")
     info_text.append(f"[{coin_result_str}]\n")
 
     daemon_str = " ".join(
@@ -210,14 +213,14 @@ def rich_draw_divination(ds: DivinatorySymbol):
     console.print("\n", info_panel, gua_pan_columns, "\n")
 
 
-def plain_draw_divination(ds: DivinatorySymbol):
+def plain_draw_divination(ds: DivinatorySymbol) -> str:
     """
     以纯文本形式返回六爻盘面内容的字符串表示。
     """
 
     z = (
-        "摇卦结果: "
-        + "[" + " ".join([cnt_to_str(cnt) for cnt in ds._cnts]) + "]\n"
+        "起卦输入: "
+        + "[" + casting_to_str(ds) + "]\n"
     )
     a = "神煞: " + " ".join(
         f"{i}-{''.join(str(x) for x in ds.daemons[i])}" for i in ds.daemons
@@ -269,16 +272,22 @@ def plain_draw_divination(ds: DivinatorySymbol):
 
 
 def cnt_to_str(cnt: int) -> str:
-    """
-    将 cnt 转换为对应的字符串表示。
-    """
-    coin_map = {
-        0: "(背)(背)(背)",
-        1: "(字)(背)(背)",
-        2: "(字)(字)(背)",
-        3: "(字)(字)(字)",
-    }
-    return coin_map[cnt]
+    """Describe a legacy code without inventing physical coin provenance."""
+    check_legacy_code(cnt)
+    return f"{cnt}({('老阴', '少阳', '少阴', '老阳')[cnt]})"
+
+
+def casting_to_str(ds: DivinatorySymbol) -> str:
+    """Render recorded input semantics without guessing physical coin faces for legacy codes."""
+    casting = ds.casting
+    standard = " ".join(f"{value}({('老阴', '少阳', '少阴', '老阳')[value - 6]})" for value in ds.line_values)
+    if casting.input_format == "legacy_yaogua":
+        return "旧版编码: " + " ".join(cnt_to_str(value) for value in ds._cnts)
+    if casting.input_format == "coin_counts":
+        side = "字面" if casting.coin_side == "text" else "背面"
+        return f"{side}枚数: " + " ".join(map(str, casting.values)) + "; 标准爻值: " + standard
+    label = "模拟三枚硬币" if casting.input_format == "random_three_coins" else "标准爻值"
+    return f"{label}: {standard}"
 
 
 def to_standard_format(ds: DivinatorySymbol) -> StandardDivinatorySymbolOutput:
@@ -329,6 +338,9 @@ def to_standard_format(ds: DivinatorySymbol) -> StandardDivinatorySymbolOutput:
 
     sds = StandardDivinatorySymbolOutput(
         yaogua=ds._cnts,
+        line_values=ds.line_values,
+        casting=ds.casting,
+        calendar=ds.calendar,
         time=ds._time.strftime("%Y-%m-%d %H:%M:%S"),
         bazi=str(ds.bazi),
         yuejian=str(ds.bazi.month.zhi),

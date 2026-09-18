@@ -1,328 +1,528 @@
 {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "六爻排盘结果",
-    "description": "一个用于描述六爻排盘结果全部信息的JSON Schema",
-    "type": "object",
-    "properties": {
-        "yaogua": {
-            "type": "array",
-            "description": "摇卦的原始记录，表示6次摇卦的结果",
-            "items": {
-                "type": "integer",
-                "description": "每次摇卦的结果，3枚硬币中出现背面的次数",
-                "enum": [
-                    0,
-                    1,
-                    2,
-                    3
-                ]
-            }
+  "$defs": {
+    "CalendarConvention": {
+      "properties": {
+        "time_basis": {
+          "const": "caller_normalized_naive",
+          "default": "caller_normalized_naive",
+          "description": "调用方已归一化的无时区时间；库不做时区或真太阳时转换",
+          "title": "Time Basis",
+          "type": "string"
         },
-        "time": {
-            "type": "string",
-            "description": "起卦的详细时间",
-            "format": "date-time"
-        },
-        "bazi": {
-            "type": "string",
-            "description": "起卦时间的干支（四柱）",
-            "pattern": "^\\S{2} \\S{2} \\S{2} \\S{2}$"
-        },
-        "yuejian": {
-            "type": "string",
-            "description": "月建",
-            "pattern": "^\\S{1}$"
-        },
-        "richen": {
-            "type": "string",
-            "description": "日辰",
-            "pattern": "^\\S{1}$"
-        },
-        "guagong": {
-            "type": "string",
-            "description": "卦宫"
-        },
-        "kongwang": {
-            "type": "string",
-            "description": "日柱对应的旬中空亡",
-            "pattern": "^\\S{2}$"
-        },
-        "guashen": {
-            "type": "string",
-            "description": "挂身"
-        },
-        "chuangzhang": {
-            "type": "array",
-            "description": "床帐",
-            "items": {
-                "type": "string",
-                "description": "床帐的地支，如 '子'、'丑'"
-            }
-        },
-        "xianggui": {
-            "type": "array",
-            "description": "香闺",
-            "items": {
-                "type": "string",
-                "description": "香闺的地支，如 '子'、'丑'"
-            }
-        },
-        "shensha": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "name": {
-                        "type": "string",
-                        "description": "神煞的名称"
-                    },
-                    "zhi": {
-                        "type": "array",
-                        "description": "神煞对应的地支列表",
-                        "items": {
-                            "type": "string",
-                            "description": "地支，如 '子'、'丑'"
-                        }
-                    }
-                },
-                "description": "神煞的名称和对应的地支列表",
-                "required": [
-                    "name",
-                    "zhi"
-                ]
+        "solar_terms": {
+          "anyOf": [
+            {
+              "const": "tyme_UTC+08:00",
+              "type": "string"
             },
-            "description": "神煞的列表"
-        },
-        "benguaming": {
-            "type": "string",
-            "description": "本卦（原始卦象）的卦名"
-        },
-        "bengua_type": {
-            "type": "array",
-            "description": "本卦的特殊类型列表",
-            "items": {
-                "type": "string",
-                "description": "特殊类型名称，如 '六合卦'、'六冲卦'、'游魂卦'、'归魂卦'"
+            {
+              "type": "null"
             }
+          ],
+          "default": "tyme_UTC+08:00",
+          "description": "节气时刻采用tyme的UTC+08:00基准；显式四柱时未知",
+          "title": "Solar Terms"
         },
-        "bianguaming": {
-            "type": "string",
-            "description": "变卦（之卦）的卦名"
-        },
-        "biangua_type": {
-            "type": "array",
-            "description": "变卦的特殊类型列表",
-            "items": {
-                "type": "string",
-                "description": "特殊类型名称，如 '六合卦'、'六冲卦'、'游魂卦'、'归魂卦'"
+        "year_boundary": {
+          "anyOf": [
+            {
+              "const": "lichun",
+              "type": "string"
+            },
+            {
+              "type": "null"
             }
+          ],
+          "default": "lichun",
+          "description": "按立春交接时刻换年；显式四柱时未知",
+          "title": "Year Boundary"
         },
-        "yao_1": {
-            "$ref": "#/definitions/yao",
-            "description": "初爻的详细信息, 即从下至上第一爻"
+        "month_boundary": {
+          "anyOf": [
+            {
+              "const": "jie",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "jie",
+          "description": "按十二节交接时刻换月，不按公历或农历月初；显式四柱时未知",
+          "title": "Month Boundary"
         },
-        "yao_2": {
-            "$ref": "#/definitions/yao",
-            "description": "二爻的详细信息"
+        "day_boundary": {
+          "anyOf": [
+            {
+              "enum": [
+                "23:00",
+                "00:00"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "23:00",
+          "description": "本次日柱换日时刻；时柱算法由zi_hour标识；显式四柱时未知",
+          "title": "Day Boundary"
         },
-        "yao_3": {
-            "$ref": "#/definitions/yao",
-            "description": "三爻的详细信息"
+        "zi_hour": {
+          "anyOf": [
+            {
+              "enum": [
+                "default_next_day",
+                "lunar_sect2_day_same"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "default_next_day",
+          "description": "本次实际采用的Tyme晚子时算法；显式四柱时未知",
+          "title": "Zi Hour"
         },
-        "yao_4": {
-            "$ref": "#/definitions/yao",
-            "description": "四爻的详细信息"
-        },
-        "yao_5": {
-            "$ref": "#/definitions/yao",
-            "description": "五爻的详细信息"
-        },
-        "yao_6": {
-            "$ref": "#/definitions/yao",
-            "description": "上爻（第六爻）的详细信息"
+        "pillar_source": {
+          "default": "time",
+          "description": "time=按显示时间推算；provided=调用方提供，不保证与显示时间一致",
+          "enum": [
+            "time",
+            "provided"
+          ],
+          "title": "Pillar Source",
+          "type": "string"
         }
+      },
+      "title": "CalendarConvention",
+      "type": "object"
     },
-    "required": [
-        "yaogua",
-        "time",
-        "bazi",
-        "kongwang",
-        "shensha",
-        "benguaming",
-        "bianguaming",
-        "yao_1",
-        "yao_2",
-        "yao_3",
-        "yao_4",
-        "yao_5",
-        "yao_6"
-    ],
-    "definitions": {
-        "wuxingEnum": {
-            "type": "string",
-            "description": "五行",
-            "enum": [
-                "金",
-                "木",
-                "水",
-                "火",
-                "土"
-            ]
+    "CastingInput": {
+      "description": "Immutable input provenance; JSON values preserve initial-to-top ordering.",
+      "properties": {
+        "input_format": {
+          "description": "输入协议：旧版0–3编码、标准6–9爻值、传统铜钱计数或模拟三硬币",
+          "enum": [
+            "legacy_yaogua",
+            "line_values",
+            "coin_counts",
+            "random_three_coins"
+          ],
+          "title": "Input Format",
+          "type": "string"
         },
-        "lineEnum": {
-            "type": "string",
-            "description": "爻线类型，阳爻或阴爻，⚊是阳爻, ⚋是阴爻",
-            "enum": [
-                "⚊",
-                "⚋"
-            ]
+        "values": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "integer"
+              },
+              "maxItems": 6,
+              "minItems": 6,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "手动输入的原始六值，初爻到上爻；随机起卦不伪造此记录",
+          "title": "Values"
+        },
+        "coin_side": {
+          "anyOf": [
+            {
+              "enum": [
+                "text",
+                "back"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "仅用于coin_counts：text=传统字面、back=传统背面",
+          "title": "Coin Side"
+        }
+      },
+      "required": [
+        "input_format"
+      ],
+      "title": "CastingInput",
+      "type": "object"
+    },
+    "Fushen": {
+      "description": "伏神信息",
+      "properties": {
+        "relative": {
+          "description": "伏神六亲（父母、兄弟、子孙、妻财、官鬼）",
+          "title": "Relative",
+          "type": "string"
+        },
+        "gan": {
+          "description": "伏神的天干",
+          "title": "Gan",
+          "type": "string"
+        },
+        "zhi": {
+          "description": "伏神的地支",
+          "title": "Zhi",
+          "type": "string"
+        },
+        "wuxing": {
+          "description": "伏神的五行属性",
+          "title": "Wuxing",
+          "type": "string"
+        }
+      },
+      "required": [
+        "relative",
+        "gan",
+        "zhi",
+        "wuxing"
+      ],
+      "title": "Fushen",
+      "type": "object"
+    },
+    "HexagramYao": {
+      "description": "卦爻信息",
+      "properties": {
+        "relative": {
+          "description": "六亲（父母、兄弟、子孙、妻财、官鬼）",
+          "title": "Relative",
+          "type": "string"
+        },
+        "gan": {
+          "description": "天干",
+          "title": "Gan",
+          "type": "string"
+        },
+        "zhi": {
+          "description": "地支",
+          "title": "Zhi",
+          "type": "string"
+        },
+        "wuxing": {
+          "description": "五行属性（金、木、水、火、土）",
+          "title": "Wuxing",
+          "type": "string"
+        },
+        "line": {
+          "description": "爻象（⚊阳爻，⚋阴爻）",
+          "title": "Line",
+          "type": "string"
+        },
+        "is_subject": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "是否为世爻",
+          "title": "Is Subject"
+        },
+        "is_object": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "是否为应爻",
+          "title": "Is Object"
+        },
+        "is_changed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "是否为摇卦所得的明动爻；不表示日冲暗动，变卦同位不设置此值",
+          "title": "Is Changed"
         },
         "fushen": {
-            "type": "object",
-            "description": "伏神信息",
-            "properties": {
-                "relative": {
-                    "type": "string",
-                    "description": "六亲关系，如 '子孙'、'父母'"
-                },
-                "gan": {
-                    "type": "string",
-                    "description": "天干，如 '丁'"
-                },
-                "zhi": {
-                    "type": "string",
-                    "description": "地支，如 '亥'"
-                },
-                "wuxing": {
-                    "$ref": "#/definitions/wuxingEnum"
-                }
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Fushen"
             },
-            "required": [
-                "relative",
-                "gan",
-                "zhi",
-                "wuxing"
-            ]
-        },
-        "originLine": {
-            "type": "object",
-            "description": "本卦中爻的属性",
-            "properties": {
-                "relative": {
-                    "type": "string",
-                    "description": "六亲关系，如 '官鬼'、'妻财'"
-                },
-                "gan": {
-                    "type": "string",
-                    "description": "天干"
-                },
-                "zhi": {
-                    "type": "string",
-                    "description": "地支"
-                },
-                "wuxing": {
-                    "$ref": "#/definitions/wuxingEnum"
-                },
-                "line": {
-                    "$ref": "#/definitions/lineEnum"
-                },
-                "is_subject": {
-                    "type": "boolean",
-                    "description": "是否为世爻"
-                },
-                "is_object": {
-                    "type": "boolean",
-                    "description": "是否为应爻"
-                },
-                "is_changed": {
-                    "type": "boolean",
-                    "description": "是否为动爻"
-                },
-                "fushen": {
-                    "description": "该爻下的伏神，如果没有则为null",
-                    "oneOf": [
-                        {
-                            "$ref": "#/definitions/fushen"
-                        },
-                        {
-                            "type": "null"
-                        }
-                    ]
-                }
-            },
-            "required": [
-                "relative",
-                "gan",
-                "zhi",
-                "wuxing",
-                "line",
-                "is_subject",
-                "is_object",
-                "is_changed",
-                "fushen"
-            ]
-        },
-        "variantLine": {
-            "type": "object",
-            "description": "变卦中爻的属性",
-            "properties": {
-                "relative": {
-                    "type": "string",
-                    "description": "六亲关系"
-                },
-                "gan": {
-                    "type": "string",
-                    "description": "天干"
-                },
-                "zhi": {
-                    "type": "string",
-                    "description": "地支"
-                },
-                "wuxing": {
-                    "$ref": "#/definitions/wuxingEnum"
-                },
-                "line": {
-                    "$ref": "#/definitions/lineEnum"
-                }
-            },
-            "required": [
-                "relative",
-                "gan",
-                "zhi",
-                "wuxing",
-                "line"
-            ]
-        },
-        "yao": {
-            "type": "object",
-            "description": "代表卦象中的一爻（爻线）",
-            "properties": {
-                "liushen": {
-                    "type": "string",
-                    "description": "爻所临的六神",
-                    "enum": [
-                        "青龙",
-                        "朱雀",
-                        "勾陈",
-                        "腾蛇",
-                        "白虎",
-                        "玄武"
-                    ]
-                },
-                "origin": {
-                    "$ref": "#/definitions/originLine",
-                    "description": "本卦的爻"
-                },
-                "variant": {
-                    "$ref": "#/definitions/variantLine",
-                    "description": "变卦的爻"
-                }
-            },
-            "required": [
-                "liushen",
-                "origin",
-                "variant"
-            ]
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "该爻下的伏神；无则为null，exclude_none序列化时省略"
         }
+      },
+      "required": [
+        "relative",
+        "gan",
+        "zhi",
+        "wuxing",
+        "line"
+      ],
+      "title": "HexagramYao",
+      "type": "object"
+    },
+    "ShenSha": {
+      "description": "神煞信息",
+      "properties": {
+        "name": {
+          "description": "神煞名称，如天乙贵人、驿马、桃花等",
+          "title": "Name",
+          "type": "string"
+        },
+        "zhi": {
+          "description": "该神煞对应的地支列表",
+          "items": {
+            "type": "string"
+          },
+          "title": "Zhi",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "zhi"
+      ],
+      "title": "ShenSha",
+      "type": "object"
+    },
+    "YaoDetail": {
+      "description": "单爻详细信息",
+      "properties": {
+        "liushen": {
+          "description": "爻所临的六神（青龙、朱雀、勾陈、腾蛇、白虎、玄武）",
+          "title": "Liushen",
+          "type": "string"
+        },
+        "origin": {
+          "$ref": "#/$defs/HexagramYao",
+          "description": "本卦爻的详细信息"
+        },
+        "variant": {
+          "$ref": "#/$defs/HexagramYao",
+          "description": "完整变卦同一爻位的信息；仅origin.is_changed为true时才是实际化出之爻"
+        }
+      },
+      "required": [
+        "liushen",
+        "origin",
+        "variant"
+      ],
+      "title": "YaoDetail",
+      "type": "object"
     }
+  },
+  "description": "六爻排盘的完整结果",
+  "properties": {
+    "yaogua": {
+      "description": "旧版 divicast 编码，初爻到上爻：0老阴、1少阳、2少阴、3老阳；不是传统字面枚数",
+      "items": {
+        "maximum": 3,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "maxItems": 6,
+      "minItems": 6,
+      "title": "Yaogua",
+      "type": "array"
+    },
+    "line_values": {
+      "anyOf": [
+        {
+          "items": {
+            "enum": [
+              6,
+              7,
+              8,
+              9
+            ],
+            "type": "integer"
+          },
+          "maxItems": 6,
+          "minItems": 6,
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "标准爻值，初爻到上爻：6老阴、7少阳、8少阴、9老阳",
+      "title": "Line Values"
+    },
+    "casting": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CastingInput"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "输入口径与原始记录；旧JSON缺失时不推断来源"
+    },
+    "calendar": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CalendarConvention"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "本次实际采用的历法口径或显式四柱来源"
+    },
+    "time": {
+      "description": "起卦的详细时间，格式：YYYY-MM-DD HH:MM:SS",
+      "title": "Time",
+      "type": "string"
+    },
+    "bazi": {
+      "description": "起卦时间的干支（四柱）",
+      "title": "Bazi",
+      "type": "string"
+    },
+    "yuejian": {
+      "description": "月建，月柱的地支",
+      "title": "Yuejian",
+      "type": "string"
+    },
+    "richen": {
+      "description": "日辰, 日柱的地支",
+      "title": "Richen",
+      "type": "string"
+    },
+    "kongwang": {
+      "description": "日柱对应的旬中空亡",
+      "title": "Kongwang",
+      "type": "string"
+    },
+    "guashen": {
+      "description": "卦身",
+      "title": "Guashen",
+      "type": "string"
+    },
+    "chuangzhang": {
+      "description": "床帐",
+      "items": {
+        "type": "string"
+      },
+      "title": "Chuangzhang",
+      "type": "array"
+    },
+    "xianggui": {
+      "description": "香闺",
+      "items": {
+        "type": "string"
+      },
+      "title": "Xianggui",
+      "type": "array"
+    },
+    "shensha": {
+      "description": "卦象中的神煞信息数组",
+      "items": {
+        "$ref": "#/$defs/ShenSha"
+      },
+      "title": "Shensha",
+      "type": "array"
+    },
+    "benguaming": {
+      "description": "本卦卦名",
+      "title": "Benguaming",
+      "type": "string"
+    },
+    "guagong": {
+      "description": "本卦所属的卦宫",
+      "title": "Guagong",
+      "type": "string"
+    },
+    "bengua_type": {
+      "description": "本卦的特殊类型",
+      "items": {
+        "type": "string"
+      },
+      "title": "Bengua Type",
+      "type": "array"
+    },
+    "bianguaming": {
+      "description": "变卦（之卦）的卦名",
+      "title": "Bianguaming",
+      "type": "string"
+    },
+    "biangua_type": {
+      "description": "变卦的特殊类型",
+      "items": {
+        "type": "string"
+      },
+      "title": "Biangua Type",
+      "type": "array"
+    },
+    "yao_1": {
+      "$ref": "#/$defs/YaoDetail",
+      "description": "初爻（最下爻）详细信息"
+    },
+    "yao_2": {
+      "$ref": "#/$defs/YaoDetail",
+      "description": "二爻详细信息"
+    },
+    "yao_3": {
+      "$ref": "#/$defs/YaoDetail",
+      "description": "三爻详细信息"
+    },
+    "yao_4": {
+      "$ref": "#/$defs/YaoDetail",
+      "description": "四爻详细信息"
+    },
+    "yao_5": {
+      "$ref": "#/$defs/YaoDetail",
+      "description": "五爻详细信息"
+    },
+    "yao_6": {
+      "$ref": "#/$defs/YaoDetail",
+      "description": "上爻（最上爻）详细信息"
+    }
+  },
+  "required": [
+    "yaogua",
+    "time",
+    "bazi",
+    "yuejian",
+    "richen",
+    "kongwang",
+    "guashen",
+    "chuangzhang",
+    "xianggui",
+    "shensha",
+    "benguaming",
+    "guagong",
+    "bengua_type",
+    "bianguaming",
+    "biangua_type",
+    "yao_1",
+    "yao_2",
+    "yao_3",
+    "yao_4",
+    "yao_5",
+    "yao_6"
+  ],
+  "title": "StandardDivinatorySymbolOutput",
+  "type": "object"
 }

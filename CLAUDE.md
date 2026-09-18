@@ -34,14 +34,13 @@ uv run python examples/bazi_example.py
 
 # Build and publish to PyPI
 
-uv cache clean # clean uv cache s
-uv sync --group test # refresh uv.lock after pyproject.toml changes and install test deps
+uv sync --group test --locked # install the reviewed lockfile before release
 uv run python -m unittest
 uv build # build source distribution and wheel, outputs to dist/
-twine upload dist/* # publish to PyPI, requires ~/.pypirc with PyPI credentials
+# Push a reviewed version tag to publish with the GitHub Actions workflow below.
 
 # GitHub Actions PyPI publishing
-# .github/workflows/publish.yml publishes tagged releases like v0.2.2.
+# .github/workflows/publish.yml publishes tagged releases like v0.2.4.
 # Keep it aligned with CI: uv sync --group test, uv run python -m unittest,
 # both examples, then uv build. PyPI should use Trusted Publishing for
 # the pypi environment instead of storing an API token secret in GitHub.
@@ -65,6 +64,7 @@ src/divicast/
 │   ├── liushen.py        # Six Gods (六神)
 │   └── relative.py       # Relative terms（六亲）
 ├── sixline/              # Six-line divination（六爻排盘）
+│   ├── casting.py           # Casting protocols, validation and provenance
 │   ├── divinatory_symbol.py  # Divination symbol logic
 │   └── output.py             # Six-line output formatting
 └── birth_chart/              # Eight-character birth chart (八字排盘)
@@ -77,8 +77,17 @@ src/divicast/
 ### Key Patterns
 
 - **ValuedMultiton**: Base class in `base/symbol.py` for creating enum-like divination symbols with Chinese names
-- **BirthChart.create()DivinatorySymbol.create()/**: Factory method that runs assemble() → analyze()
+- **BirthChart.create()/DivinatorySymbol.create()**: Factory methods for chart assembly and analysis
 - Entity symbol classes must keep a single canonical implementation. Do not keep duplicate `ValuedMultiton` subclasses in multiple modules.
+
+- Six-line casting conversion/validation belongs to `sixline/casting.py`; CLI/MCP adapters must consume
+  `StandardDivinatorySymbolOutput` directly instead of duplicating input or calendar models.
+- Preserve `cnts`/`yaogua` as legacy 0–3 codes. New input uses `line_values` or `coin_counts` with an
+  explicit `coin_side`. Do not describe legacy codes as traditional text-side counts or mutate caller input.
+- `time_utils.create_four_pillars` uses validated per-call rules, defaults to 23:00 day rollover, and
+  must not consult or change Tyme's global provider. Caller-supplied Bazi must not be labeled time-derived.
+- Keep `sixline/schema.json` synchronized with its Pydantic model and test both legacy JSON input
+  and new output. Maintain the source-based 64-hexagram fixtures and 4096-cast regression in this library.
 
 ### Data Models
 
@@ -89,6 +98,7 @@ src/divicast/
 ## Key Files
 
 - `base/symbol.py`:  all divination symbols are subclasses of ValuedMultiton, which provides a way to create enum-like classes with Chinese names and values.
+- `time_utils.py`: shared datetime validation, per-call calendar rules, four pillars and旬空.
 - `birth_chart/birth.py`: birth chart（八字） assembly and analysis logic,
 - `docs/bazi_module.md`: birth chart（八字） module design, capabilities, output structure, test coverage and edge cases.
 - `sixline/divinatory_symbol.py`: six-line（六爻） divination symbol generation and logic

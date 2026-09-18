@@ -24,7 +24,9 @@
 六爻相关代码位于：
 
 - `src/divicast/sixline/divinatory_symbol.py`
+- `src/divicast/sixline/casting.py`（输入归一化、校验与来源记录）
 - `src/divicast/sixline/output.py`
+- `src/divicast/time_utils.py`（按次调用的历法规则与时间元数据）
 
 相关基础实体位于：
 
@@ -43,7 +45,10 @@
 当前提供的主入口是：
 
 ```python
-DivinatorySymbol.create(cnts=None, now=None, bazi=None)
+DivinatorySymbol.create(
+    cnts=None, now=None, bazi=None,
+    *, line_values=None, coin_counts=None, coin_side=None, calc_rules=None,
+)
 ```
 
 已经实现：
@@ -54,12 +59,35 @@ DivinatorySymbol.create(cnts=None, now=None, bazi=None)
 - 支持显式传入八字
 - 不传八字时根据时间自动生成起卦四柱
 
+三种记录入口互斥，顺序统一为初爻到上爻：
+
+| 输入 | 含义 |
+| --- | --- |
+| `cnts` | 旧版编码：0 老阴、1 少阳、2 少阴、3 老阳，保持既有盘面兼容 |
+| `line_values` | 标准值：6 老阴、7 少阳、8 少阴、9 老阳；推荐新调用使用 |
+| `coin_counts` + `coin_side` | 传统铜钱计数；`text` 字面或 `back` 背面必须显式指定 |
+
+传统铜钱法按字面计 2、背面计 3 相加；字面数 0/1/2/3 对应标准值 9/8/7/6，
+背面数则对应 6/7/8/9。旧文档把 `cnts`／`yaogua` 称为字面数有误；不能因此
+自动翻转历史记录。现代硬币应先明确字面与背面的对应，不作猜测。
+
+只在三种记录都为 `None` 时模拟三枚公平硬币，四种爻值权重为 1:3:3:1。
+空记录、非六项、越界、浮点数、布尔值、互斥参数或未声明计数面均抛出 `ValueError`。
+输入被复制为不可变记录，修改调用方的列表不会影响已生成的盘面。
+
 时间约定：
 
 - 只接受 `naive datetime`
 - 调用方必须先完成时区、地点、真太阳时等归一化
 - 库内不做时区换算和真太阳时修正
 - 不传 `now` 时，默认使用当前本地 `naive datetime`
+- 完整保留分秒；节气时刻以 tyme 的 UTC+08:00 为基准，调用方负责明确时间基准
+- 默认按立春换年、十二节交接换月、23 点换日，不读取或修改全局 `LunarHour.provider`
+- `calc_rules={"zi_hour": "default_next_day"}` 为默认规则；
+  `lunar_sect2_day_same` 为 Tyme 流派 2，晚子时日柱仍属当天、0 点换日，时柱沿用该流派算法
+- 未知规则会报错；共享四柱函数同样按次调用选择日界
+- 显式 `bazi` 与 `calc_rules` 互斥。此时元数据标为 `pillar_source=provided`，
+  不声称四柱由 `now` 推导，也不编造其日界或节气口径
 
 ### 2. 起卦时间四柱
 
@@ -176,6 +204,9 @@ StandardDivinatorySymbolOutput
 顶层包含：
 
 - `yaogua`
+- `line_values`（标准 6–9 爻值）
+- `casting`（输入方式、手动原始六值及适用时的计数面）
+- `calendar`（实际历法规则或显式四柱来源）
 - `time`
 - `bazi`
 - `yuejian`
@@ -191,6 +222,17 @@ StandardDivinatorySymbolOutput
 - `bianguaming`
 - `biangua_type`
 - `yao_1` ~ `yao_6`
+
+`yaogua` 保持旧引擎编码；原始手动输入在 `casting.values`，不能将两者混用。
+`casting.input_format` 为 `legacy_yaogua`、`line_values`、`coin_counts` 或
+`random_three_coins`；随机起卦不伪造手动输入。`line_values` 可用于复现。
+
+`calendar` 含 `time_basis`、`solar_terms`、`year_boundary`、`month_boundary`、
+`day_boundary`、`zi_hour`、`pillar_source`。显式四柱的未知口径为 `None`，
+使用 `exclude_none=True` 序列化时省略。读取旧 JSON 时允许缺少新增字段，保持未知，
+不会自动补造输入或历法来源。新建盘面总会提供这三项元数据。
+
+模型与随包的 `schema.json` 同步维护；`yaogua` 校验恰好六项合法编码。
 
 ### 2. 时间与背景信息
 
@@ -252,6 +294,9 @@ StandardDivinatorySymbolOutput
 - 六爻逐爻信息
 - 动爻、世应、伏神标记
 
+渲染器显示输入协议和阴阳动静。只有真实 `coin_counts` 输入才显示声明过的字面／
+背面枚数；旧编码与随机结果不被冒充成用户实际摇出的字背记录。
+
 适合：
 
 - 本地调试
@@ -287,6 +332,9 @@ StandardDivinatorySymbolOutput
 主要测试文件包括：
 
 - `tests/test_divinatory_symbol.py`
+- `tests/test_sixline_contract.py`：64 卦固定表、八纯卦纳甲、伏神、4096 种动静组合、
+  随机权重、边界时刻、输入隔离、按次历法及全局 provider 干扰回归
+- `tests/fixtures/sixline_reference.json` 和 `sixline_reference.md`：独立基准及来源说明
 
 此外也有基础实体与时间约束测试，间接支持六爻模块：
 
