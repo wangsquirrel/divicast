@@ -53,7 +53,7 @@ class BirthChartAnalyzer:
 
         result = WuxingAnalysis()
         day_master = birth_chart.dayzhu.gan
-        month_zhi_wuxing = birth_chart.monthzhu.zhi.belongs_to(Wuxing)
+        month_zhi_wuxing = birth_chart.monthzhu.zhi.wuxing
 
         pillars = [
             (Zhu.YEAR, birth_chart.yearzhu),
@@ -64,17 +64,17 @@ class BirthChartAnalyzer:
 
         for pillar_name, zhu in pillars:
             stem_weight = PILLAR_STEM_WEIGHTS[pillar_name]
-            stem_element = zhu.gan.belongs_to(Wuxing)
+            stem_element = zhu.gan.wuxing
             result.items[stem_element].count += 1
             result.items[stem_element].score += stem_weight
 
             branch_weight = PILLAR_BRANCH_WEIGHTS[pillar_name]
             for canggan in zhu.canggan:
                 canggan_weight = branch_weight * CANGGAN_WEIGHTS[canggan.canggan_type]
-                canggan_element = canggan.gan.belongs_to(Wuxing)
+                canggan_element = canggan.gan.wuxing
                 result.items[canggan_element].count += 1
                 result.items[canggan_element].score += canggan_weight
-        result.items[month_zhi_wuxing].score += abs(_month_ling_bonus(day_master.belongs_to(Wuxing), month_zhi_wuxing))
+        result.items[month_zhi_wuxing].score += abs(_month_ling_bonus(day_master.wuxing, month_zhi_wuxing))
 
         result.month_zhi_wuxing = month_zhi_wuxing
         result.total_score = sum(item.score for item in result.items.values())
@@ -114,8 +114,8 @@ class BirthChartAnalyzer:
 
         result = StrengthAnalysis()
         day_master = birth_chart.dayzhu.gan
-        day_master_wuxing = day_master.belongs_to(Wuxing)
-        month_zhi_wuxing = birth_chart.monthzhu.zhi.belongs_to(Wuxing)
+        day_master_wuxing = day_master.wuxing
+        month_zhi_wuxing = birth_chart.monthzhu.zhi.wuxing
         month_ling_family = _family_for_element(day_master_wuxing, month_zhi_wuxing)
 
         roots: list[RootInfo] = []
@@ -140,7 +140,7 @@ class BirthChartAnalyzer:
 
             phase_weight = ZHANGSHENG_WEIGHTS.get(zhu.xingyun, 0.0)
             if phase_weight:
-                if _is_supportive_element(day_master_wuxing, zhu.zhi.belongs_to(Wuxing)):
+                if _is_supportive_element(day_master_wuxing, zhu.zhi.wuxing):
                     support_score += phase_weight * 0.6
                 else:
                     opposition_score += phase_weight * 0.35
@@ -148,7 +148,7 @@ class BirthChartAnalyzer:
             branch_weight = PILLAR_BRANCH_WEIGHTS[pillar_name]
             for canggan in zhu.canggan:
                 canggan_weight = branch_weight * CANGGAN_WEIGHTS[canggan.canggan_type]
-                canggan_element = canggan.gan.belongs_to(Wuxing)
+                canggan_element = canggan.gan.wuxing
                 canggan_shishen = day_master.get_shishen(canggan.gan)
                 family = TEN_GOD_FAMILIES[canggan_shishen]
 
@@ -207,7 +207,7 @@ class BirthChartAnalyzer:
         """喜忌分析主题: 根据旺衰和五行分布填充喜用忌神。"""
 
         result = FavorabilityAnalysis()
-        day_master_wuxing = birth_chart.dayzhu.gan.belongs_to(Wuxing)
+        day_master_wuxing = birth_chart.dayzhu.gan.wuxing
         strength = strength_analysis.day_master_strength
         if strength is None:
             return result

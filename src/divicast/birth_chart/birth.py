@@ -1,12 +1,14 @@
 import datetime
+from collections.abc import Sequence
 from typing import Self
 
 from tyme4py import eightchar, enums, lunar, solar
 from tyme4py.eightchar.provider import EightCharProvider
 from tyme4py.eightchar.provider.impl import DefaultEightCharProvider, LunarSect2EightCharProvider
 
+from divicast.entities.pillars import FourPillars
 from divicast.entities.trigram import Trigram  # type: ignore
-from divicast.time_utils import check_naive_datetime
+from divicast.time_utils import check_naive_datetime, four_pillars_from_tyme
 
 from ..entities.daemon import Daemon
 from ..entities.ganzhi import Canggan, Dizhi, Nayin, Shishen, SixtyJiazi, Tiangan, TwelveZhangsheng
@@ -16,36 +18,64 @@ from .analysis_models import ChartAnalysis
 from .daemon import build_pillar_shensha
 
 
-class ZhuInfo(object):
-    """柱的命盘信息, 可以是年柱, 月柱, 日柱, 时柱"""
+class ZhuInfo:
+    """单柱的完整信息；根据干支、日主和已计算的神煞一次构造。"""
 
-    gan: Tiangan
-    zhi: Dizhi
-
-    sixty_jiazi: SixtyJiazi  # 六十甲子
+    _sixty_jiazi: SixtyJiazi
     zhuxing: Shishen  # 主星
     canggan: list[Canggan]  # 藏干
     fuxing: list[Shishen]  # 副星
     xingyun: TwelveZhangsheng  # 星运
     zizuo: TwelveZhangsheng  # 自坐
-    kongwang: tuple[Dizhi, Dizhi]  # 空亡
-    nayin: Nayin  # 纳音
     shensha: list[Daemon]  # 神煞
 
-    def __init__(self, ganzhi: str) -> None:
-        self.gan = Tiangan[ganzhi[0]]
-        self.zhi = Dizhi[ganzhi[1]]
-        self.sixty_jiazi = SixtyJiazi(self.gan, self.zhi)
-        self.shensha = []
+    def __init__(self, sixty_jiazi: SixtyJiazi, *, day_master: Tiangan, shensha: Sequence[Daemon]) -> None:
+        if not isinstance(sixty_jiazi, SixtyJiazi):
+            raise TypeError("sixty_jiazi must be a SixtyJiazi")
+        if not isinstance(day_master, Tiangan):
+            raise TypeError("day_master must be a Tiangan")
+        if isinstance(shensha, (str, bytes, bytearray)) or not isinstance(shensha, Sequence):
+            raise TypeError("shensha must be a sequence of Daemon values")
+        shensha_values = list(shensha)
+        if any(not isinstance(value, Daemon) for value in shensha_values):
+            raise TypeError("shensha must contain only Daemon values")
+
+        self._sixty_jiazi = sixty_jiazi
+        self.canggan = self.zhi.canggan()
+        self.zhuxing = day_master.get_shishen(self.gan)
+        self.fuxing = [day_master.get_shishen(canggan.gan) for canggan in self.canggan]
+        self.xingyun = day_master.get_twelve_zhangsheng(self.zhi)
+        self.zizuo = self.gan.get_twelve_zhangsheng(self.zhi)
+        self.shensha = shensha_values
+
+    @property
+    def sixty_jiazi(self) -> SixtyJiazi:
+        return self._sixty_jiazi
+
+    @property
+    def gan(self) -> Tiangan:
+        return self.sixty_jiazi.gan
+
+    @property
+    def zhi(self) -> Dizhi:
+        return self.sixty_jiazi.zhi
+
+    @property
+    def nayin(self) -> Nayin:
+        return self.sixty_jiazi.get_nayin()
+
+    @property
+    def kongwang(self) -> tuple[Dizhi, Dizhi]:
+        return self.sixty_jiazi.get_kongwang()
 
 
-class BirthChart(object):
+class BirthChart:
     # 原始信息
     _birth_solar: datetime.datetime  # 调用方已归一化好的排盘时间，例如当地真太阳时
     _gender: Gender  # 性别
 
     # tyme4py库类型的辅助时间信息
-    _bazi: lunar.EightChar
+    _bazi: eightchar.EightChar
     _solar_time: solar.SolarTime
     _child_limit: eightchar.ChildLimit  # 童限
     _calc_rules: dict[str, str]
@@ -62,6 +92,7 @@ class BirthChart(object):
     term: solar.SolarTermDay  # 二十四节气
 
     # 四柱
+    _pillars: FourPillars
     yearzhu: ZhuInfo
     monthzhu: ZhuInfo
     dayzhu: ZhuInfo
@@ -69,6 +100,11 @@ class BirthChart(object):
 
     # 客观属性外的一些启发式分析结果，供后续更复杂的分析与对照使用
     chart_analysis: ChartAnalysis
+
+    @property
+    def pillars(self) -> FourPillars:
+        """命盘的基础四柱；各柱的命盘信息引用其中对应的干支值。"""
+        return self._pillars
 
     @classmethod
     def get_eightchar_provider(cls, calc_rules: dict[str, str] | None = None) -> EightCharProvider:
@@ -89,15 +125,19 @@ class BirthChart(object):
         return providers[rule]
 
     @classmethod
-    def calc_eightchar(cls, lunar_hour: lunar.LunarHour, calc_rules: dict[str, str] | None = None) -> eightchar.EightChar:
+    def calc_eightchar(
+        cls, lunar_hour: lunar.LunarHour, calc_rules: dict[str, str] | None = None
+    ) -> eightchar.EightChar:
         """按本次调用指定口径计算八字，不依赖 tyme4py 的全局 provider。"""
         return cls.get_eightchar_provider(calc_rules).get_eight_char(lunar_hour)
 
     def __init__(
         self, birth_solar: datetime.datetime, gender: Gender, calc_rules: dict[str, str] | None = None
     ) -> None:
-        """命盘初始化，只包括八字，没有完整的盘面信息"""
+        """构造包含完整盘面和分析结果的命盘；时间须由调用方归一化。"""
         self._birth_solar = check_naive_datetime(birth_solar)
+        if not isinstance(gender, Gender):
+            raise TypeError("gender must be a Gender")
         self._gender = gender
         self._calc_rules = calc_rules or {}
         self._solar_time = solar.SolarTime.from_ymd_hms(
@@ -109,6 +149,7 @@ class BirthChart(object):
             self._birth_solar.second,
         )
         self._bazi = self.calc_eightchar(self._solar_time.get_lunar_hour(), self._calc_rules)
+        self._pillars = four_pillars_from_tyme(self._bazi)
         previous_provider = lunar.LunarHour.provider
         lunar.LunarHour.provider = self.get_eightchar_provider(self._calc_rules)
         try:
@@ -116,22 +157,25 @@ class BirthChart(object):
         finally:
             lunar.LunarHour.provider = previous_provider
 
+        self.assemble()
+        self.analyze()
+
     @classmethod
     def create(cls, dt: datetime.datetime, gender: Gender, calc_rules: dict[str, str] | None = None) -> Self:
-        """创建命盘。
+        """创建完整命盘，与直接调用构造函数等价。
 
         `dt` 必须是调用方已经归一化好的排盘时间，且必须是 naive datetime。
         """
-        bc = cls(dt, gender, calc_rules=calc_rules)
-        bc.assemble()
-        bc.analyze()
-        return bc
+        return cls(dt, gender, calc_rules=calc_rules)
 
     def assemble(self) -> None:
-        self.yearzhu = ZhuInfo(self._bazi.get_year().get_name())
-        self.monthzhu = ZhuInfo(self._bazi.get_month().get_name())
-        self.dayzhu = ZhuInfo(self._bazi.get_day().get_name())
-        self.bihourzhu = ZhuInfo(self._bazi.get_hour().get_name())
+        """装配盘面和各柱信息；构造过程会自动调用。"""
+        shensha_by_pillar = build_pillar_shensha(self.pillars, self._gender)
+        pillar_infos = [
+            ZhuInfo(pillar, day_master=self.pillars.day.gan, shensha=shensha)
+            for pillar, shensha in zip(self.pillars, shensha_by_pillar, strict=True)
+        ]
+        self.yearzhu, self.monthzhu, self.dayzhu, self.bihourzhu = pillar_infos
 
         self.kongwang = self.dayzhu.sixty_jiazi.get_kongwang()
         self.chinese_zodiac = self.yearzhu.zhi.chinese_zodiac()
@@ -148,23 +192,8 @@ class BirthChart(object):
         self.minggua = self._calc_minggua()
         self.minggong = self._calc_minggong()
 
-        for zhu in [self.yearzhu, self.monthzhu, self.dayzhu, self.bihourzhu]:
-            zhu.canggan = zhu.zhi.canggan()
-            zhu.zhuxing = self.dayzhu.gan.get_shishen(zhu.gan)
-            zhu.fuxing = [self.dayzhu.gan.get_shishen(canggan.gan) for canggan in zhu.canggan]
-
-            zhu.xingyun = self.dayzhu.gan.get_twelve_zhangsheng(zhu.zhi)
-            zhu.zizuo = zhu.gan.get_twelve_zhangsheng(zhu.zhi)
-            zhu.kongwang = zhu.sixty_jiazi.get_kongwang()
-            zhu.nayin = zhu.sixty_jiazi.get_nayin()
-            zhu.shensha = []
-
-        shensha_by_pillar = build_pillar_shensha(self._bazi, self._gender)
-        for zhu, shensha in zip([self.yearzhu, self.monthzhu, self.dayzhu, self.bihourzhu], shensha_by_pillar):
-            zhu.shensha = shensha
-
     def analyze(self) -> None:
-        """计算并填充统一分析结果。当前分析层以启发式加权与规则匹配为主。"""
+        """计算并填充统一分析结果；构造过程会自动调用。"""
         self.chart_analysis = analyze_chart(self)
 
     def _calc_minggua(self) -> str:

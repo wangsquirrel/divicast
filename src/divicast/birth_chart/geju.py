@@ -294,7 +294,7 @@ def _check_huaqigeju(birth_chart: BirthChart, analysis: ChartAnalysis) -> Geju |
         return None
 
     target_ratio = scores[target_element] / total
-    month_element = birth_chart.monthzhu.zhi.belongs_to(Wuxing)
+    month_element = birth_chart.monthzhu.zhi.wuxing
     root_score = analysis.strength.day_master_root_score
 
     if target_ratio < 0.33:

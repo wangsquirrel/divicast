@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from ..base.symbol import ValuedMultiton
+from ..base.symbol import MetaphysicalSymbol
 from ..entities.ganzhi import Dizhi, Tiangan
 from ..entities.wuxing import Wuxing
 from .analysis_enums import GanZhi, Zhu
 
 
-class RelationType(ValuedMultiton):
+class RelationType(MetaphysicalSymbol):
     """关系的大类标签，用于输出中的 relation 字段。"""
 
     HE = (0, "合")
@@ -17,7 +17,7 @@ class RelationType(ValuedMultiton):
     HUI = (5, "会")
 
 
-class RelationPattern(ValuedMultiton):
+class RelationPattern(MetaphysicalSymbol):
     """具体关系模式。
 
     这里表示的是“哪一种关系规则”，例如天干五合、地支三刑。
@@ -36,8 +36,18 @@ class RelationPattern(ValuedMultiton):
     DIZHI_SAN_XING = (9, "地支三刑")
     DIZHI_ZI_XING = (10, "地支自刑")
 
+    @property
+    def relation_type(self) -> RelationType:
+        """关系大类，如合、冲、刑。"""
+        return _RELATION_TYPES[self]
 
-class RelationQualifier(ValuedMultiton):
+    @property
+    def position_kind(self) -> GanZhi:
+        """该关系作用于天干还是地支。"""
+        return _RELATION_POSITIONS[self]
+
+
+class RelationQualifier(MetaphysicalSymbol):
     """关系的细分说明，目前主要用于刑。"""
 
     WU_EN_ZHI_XING = (0, "无恩之刑")
@@ -46,7 +56,7 @@ class RelationQualifier(ValuedMultiton):
     ZI_XING = (3, "自刑")
 
 
-class RelationOutcomeKind(ValuedMultiton):
+class RelationOutcomeKind(MetaphysicalSymbol):
     """关系结果的表达方式。
 
     - `化`: 例如天干五合、地支六合中的“化土”
@@ -57,33 +67,32 @@ class RelationOutcomeKind(ValuedMultiton):
     JU = (1, "局")
 
 
-RelationPattern._BELONGS_TO = {
-    RelationType: {
-        RelationPattern.TIANGAN_CHONG: RelationType.CHONG,
-        RelationPattern.TIANGAN_WU_HE: RelationType.HE,
-        RelationPattern.DIZHI_XIANG_XING: RelationType.XING,
-        RelationPattern.DIZHI_LIU_CHONG: RelationType.CHONG,
-        RelationPattern.DIZHI_LIU_HE: RelationType.HE,
-        RelationPattern.DIZHI_LIU_HAI: RelationType.HAI,
-        RelationPattern.DIZHI_LIU_PO: RelationType.PO,
-        RelationPattern.DIZHI_SAN_HE: RelationType.HE,
-        RelationPattern.DIZHI_SAN_HUI: RelationType.HUI,
-        RelationPattern.DIZHI_SAN_XING: RelationType.XING,
-        RelationPattern.DIZHI_ZI_XING: RelationType.XING,
-    },
-    GanZhi: {
-        RelationPattern.TIANGAN_CHONG: GanZhi.TIANGAN,
-        RelationPattern.TIANGAN_WU_HE: GanZhi.TIANGAN,
-        RelationPattern.DIZHI_XIANG_XING: GanZhi.DIZHI,
-        RelationPattern.DIZHI_LIU_CHONG: GanZhi.DIZHI,
-        RelationPattern.DIZHI_LIU_HE: GanZhi.DIZHI,
-        RelationPattern.DIZHI_LIU_HAI: GanZhi.DIZHI,
-        RelationPattern.DIZHI_LIU_PO: GanZhi.DIZHI,
-        RelationPattern.DIZHI_SAN_HE: GanZhi.DIZHI,
-        RelationPattern.DIZHI_SAN_HUI: GanZhi.DIZHI,
-        RelationPattern.DIZHI_SAN_XING: GanZhi.DIZHI,
-        RelationPattern.DIZHI_ZI_XING: GanZhi.DIZHI,
-    },
+_RELATION_TYPES: dict[RelationPattern, RelationType] = {
+    RelationPattern.TIANGAN_CHONG: RelationType.CHONG,
+    RelationPattern.TIANGAN_WU_HE: RelationType.HE,
+    RelationPattern.DIZHI_XIANG_XING: RelationType.XING,
+    RelationPattern.DIZHI_LIU_CHONG: RelationType.CHONG,
+    RelationPattern.DIZHI_LIU_HE: RelationType.HE,
+    RelationPattern.DIZHI_LIU_HAI: RelationType.HAI,
+    RelationPattern.DIZHI_LIU_PO: RelationType.PO,
+    RelationPattern.DIZHI_SAN_HE: RelationType.HE,
+    RelationPattern.DIZHI_SAN_HUI: RelationType.HUI,
+    RelationPattern.DIZHI_SAN_XING: RelationType.XING,
+    RelationPattern.DIZHI_ZI_XING: RelationType.XING,
+}
+
+_RELATION_POSITIONS: dict[RelationPattern, GanZhi] = {
+    RelationPattern.TIANGAN_CHONG: GanZhi.TIANGAN,
+    RelationPattern.TIANGAN_WU_HE: GanZhi.TIANGAN,
+    RelationPattern.DIZHI_XIANG_XING: GanZhi.DIZHI,
+    RelationPattern.DIZHI_LIU_CHONG: GanZhi.DIZHI,
+    RelationPattern.DIZHI_LIU_HE: GanZhi.DIZHI,
+    RelationPattern.DIZHI_LIU_HAI: GanZhi.DIZHI,
+    RelationPattern.DIZHI_LIU_PO: GanZhi.DIZHI,
+    RelationPattern.DIZHI_SAN_HE: GanZhi.DIZHI,
+    RelationPattern.DIZHI_SAN_HUI: GanZhi.DIZHI,
+    RelationPattern.DIZHI_SAN_XING: GanZhi.DIZHI,
+    RelationPattern.DIZHI_ZI_XING: GanZhi.DIZHI,
 }
 
 
@@ -160,7 +169,7 @@ class RelationEvent:
 
     @property
     def relation_type(self) -> RelationType:
-        return self.pattern.belongs_to(RelationType)
+        return self.pattern.relation_type
 
 
 class RelationIndexEntry:
@@ -192,7 +201,7 @@ class RelationIndexEntry:
 
     @property
     def relation_type(self) -> RelationType:
-        return self.pattern.belongs_to(RelationType)
+        return self.pattern.relation_type
 
 
 class PillarRelationIndex:

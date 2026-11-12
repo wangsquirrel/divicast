@@ -2,47 +2,24 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Mapping, Sequence
-from typing import List, NamedTuple, Optional, Self
+from typing import List, Self
 
 from divicast.entities.daemon import Daemon
 from divicast.entities.ganzhi import Dizhi, Tiangan
 from divicast.entities.liushen import Liushen
+from divicast.entities.pillars import FourPillars
 from divicast.entities.relative import Relative
-from divicast.entities.trigram import *
-from divicast.entities.trigram import Trigram
+from divicast.entities.trigram import Hexagram, Line, Trigram
 from divicast.entities.wuxing import Wuxing
 from divicast.time_utils import (
-    CalendarConvention, check_naive_datetime, create_four_pillars, create_kongwang, normalize_calc_rules,
+    CalendarConvention,
+    check_naive_datetime,
+    create_four_pillars,
+    create_kongwang,
+    normalize_calc_rules,
 )
+
 from .casting import CastingInput, CoinSide, check_legacy_code, normalize_casting
-
-
-class Bazi(NamedTuple):
-    year: Ganzhi
-    month: Ganzhi
-    day: Ganzhi
-    bihour: Ganzhi
-
-    def __str__(self):
-        return f"{self.year} {self.month} {self.day} {self.bihour}"
-
-
-def create_bazi(dt: datetime.datetime, *, calc_rules: Mapping[str, str] | None = None) -> Bazi:
-    """Adapt the shared per-call calendar result to the legacy six-line Bazi interface."""
-    pillars = create_four_pillars(dt, calc_rules=calc_rules)
-    year = Ganzhi(pillars.year.gan, pillars.year.zhi)
-    month = Ganzhi(pillars.month.gan, pillars.month.zhi)
-    day = Ganzhi(pillars.day.gan, pillars.day.zhi)
-    bihour = Ganzhi(pillars.hour.gan, pillars.hour.zhi)
-    return Bazi(year, month, day, bihour)
-
-
-class Ganzhi(NamedTuple):
-    gan: Tiangan
-    zhi: Dizhi
-
-    def __str__(self):
-        return f"{self.gan}{self.zhi}"
 
 
 def create_relative(obj: Wuxing, sub: Wuxing) -> Relative:
@@ -197,7 +174,7 @@ class DivinatorySymbol:
 
     # 以下和时间有关
     _time: datetime.datetime
-    bazi: Bazi
+    bazi: FourPillars
     kongwang: tuple[Dizhi, Dizhi]  # 空亡
     daemons: dict[Daemon, List[Dizhi]]  # 神煞
 
@@ -221,8 +198,8 @@ class DivinatorySymbol:
     def create(
         cls,
         cnts: Sequence[int] | None = None,
-        now: Optional[datetime.datetime] = None,
-        bazi: Optional[Bazi] = None,
+        now: datetime.datetime | None = None,
+        bazi: FourPillars | None = None,
         *,
         line_values: Sequence[int] | None = None,
         coin_counts: Sequence[int] | None = None,
@@ -233,7 +210,7 @@ class DivinatorySymbol:
         创建一个六爻卦象实例。
         :param cnts: 旧版 0–3 编码，初爻到上爻；保留旧调用，不表示传统字面数
         :param now: 当前排盘时间，必须是调用方已归一化的 naive datetime，默认为当前本地时间
-        :param bazi: 显式四柱；提供时不推算历法，不能同时指定 calc_rules
+        :param bazi: 显式 FourPillars；提供时不推算历法，不能同时指定 calc_rules
         :param line_values: 六个标准爻值（6老阴、7少阳、8少阴、9老阳）
         :param coin_counts: 六次三硬币枚数，须用 coin_side 指定字面或背面
         :param coin_side: text=字面，back=背面，采用传统铜钱法
@@ -241,13 +218,19 @@ class DivinatorySymbol:
         """
         d = cls()
         d._time = check_naive_datetime(now) if now is not None else datetime.datetime.now()
+        if bazi is not None and not isinstance(bazi, FourPillars):
+            raise TypeError("bazi must be a FourPillars")
         if bazi is not None and calc_rules is not None:
             raise ValueError("bazi and calc_rules are mutually exclusive")
         rules = normalize_calc_rules(calc_rules)
-        d._cnts, d.casting = normalize_casting(cnts, line_values=line_values, coin_counts=coin_counts, coin_side=coin_side)
+        d._cnts, d.casting = normalize_casting(
+            cnts, line_values=line_values, coin_counts=coin_counts, coin_side=coin_side
+        )
 
-        d.bazi = bazi if bazi is not None else create_bazi(d._time, calc_rules=rules)
-        d.calendar = CalendarConvention.for_provided_pillars() if bazi is not None else CalendarConvention.from_rules(rules)
+        d.bazi = bazi if bazi is not None else create_four_pillars(d._time, calc_rules=rules)
+        d.calendar = (
+            CalendarConvention.for_provided_pillars() if bazi is not None else CalendarConvention.from_rules(rules)
+        )
         d._roll(d._cnts)  # 1. 摇卦
         d._assemble_tiangan()  # 2. 装天干
         d._assemble_dizhi()  # 3. 装地支
@@ -308,7 +291,7 @@ class DivinatorySymbol:
 
     @property
     def six_denties(self) -> List[Liushen]:
-        return [l.liushen for l in self.lines]
+        return [line.liushen for line in self.lines]
 
     def _roll(self, cnts: Sequence[int]):
         """
@@ -337,8 +320,8 @@ class DivinatorySymbol:
             self.lines[i].variant.zhi = self._dizhi_dict[self.variant_outside_trigram][i]
 
         for i in range(0, 6):
-            self.lines[i].origin.wuxing = self.lines[i].origin.zhi.belongs_to(Wuxing)
-            self.lines[i].variant.wuxing = self.lines[i].variant.zhi.belongs_to(Wuxing)
+            self.lines[i].origin.wuxing = self.lines[i].origin.zhi.wuxing
+            self.lines[i].variant.wuxing = self.lines[i].variant.zhi.wuxing
 
     def _assemble_shiying(self):
         """
@@ -375,16 +358,16 @@ class DivinatorySymbol:
 
         for i in range(0, 6):
             self.lines[i].origin.relative = create_relative(
-                self.origin_hexagram.belongs_to_trigram().belongs_to(Wuxing),
+                self.origin_hexagram.belongs_to_trigram().wuxing,
                 self.lines[i].origin.wuxing,
             )
             # 变卦的六亲要按照变卦各爻的地支和本卦所属卦宫的五行生克关系来装。
             self.lines[i].variant.relative = create_relative(
-                self.origin_hexagram.belongs_to_trigram().belongs_to(Wuxing),
+                self.origin_hexagram.belongs_to_trigram().wuxing,
                 self.lines[i].variant.wuxing,
             )
 
-        diffs = set(Relative.all()) - set(l.origin.relative for l in self.lines)
+        diffs = set(Relative.all()) - set(line.origin.relative for line in self.lines)
         if len(diffs) == 0:
             return
 
@@ -402,11 +385,11 @@ class DivinatorySymbol:
             bazi=self.bazi,  # 飞伏装配与时间无关，复用四柱，避免额外读取当前时钟。
         )
         for r in diffs:
-            for i, l in enumerate(d.lines):
-                if l.origin.relative == r:
-                    self.lines[i].origin.fushen = l.origin
+            for i, line in enumerate(d.lines):
+                if line.origin.relative == r:
+                    self.lines[i].origin.fushen = line.origin
 
-    def _assemble_liushen(self, bazi: Bazi):
+    def _assemble_liushen(self, bazi: FourPillars):
         """"""
         first = create_first_liushen(bazi.day.gan)
         for i in range(0, 6):
@@ -632,9 +615,9 @@ class DivinatorySymbol:
         self.daemons[Daemon.Mouxing] = [mouxing_dict[self.bazi.day.zhi]]
 
         # 卦身
-        for i, l in enumerate(self.lines):
-            if l.origin.is_subject:
-                if l.origin.line == Line.YinYao:
+        for i, line in enumerate(self.lines):
+            if line.origin.is_subject:
+                if line.origin.line == Line.YinYao:
                     self.guashen = Dizhi.Wu.next(i)
                 else:
                     self.guashen = Dizhi.Zi.next(i)

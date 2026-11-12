@@ -76,18 +76,25 @@ d = DivinatorySymbol.create(
 更多用法请参考 examples/bazi_example.py。
 
 ```python
-import datetime
-from divicast.birth_chart import BirthChart, Gender
+from datetime import datetime
+
+from divicast.birth_chart.birth import BirthChart
+from divicast.birth_chart.output import to_standard_format
+from divicast.entities.misc import Gender
 
 # 创建一个八字盘
 chart = BirthChart.create(
-    datetime.datetime(1990, 8, 15, 14, 30, 0),
+    datetime(1990, 8, 15, 14, 30, 0),
     gender=Gender.Male,
 )
 
-# 输出八字标准化json格式
-print(chart.to_standard_output().model_dump_json(exclude_none=True))
+# 输出八字及指定时间的运势信息
+output = to_standard_format(chart, target_dt=datetime(2026, 3, 21, 12, 30))
+print(output.model_dump_json(exclude_none=True))
 ```
+
+领域符号、干支、四柱及 Python API 的调整见[领域对象与迁移说明](docs/domain_values.md)。
+当前已确认的规则缺陷和后续改进项见[已知问题](docs/known_issues.md)。
 
 ## 时间约定
 

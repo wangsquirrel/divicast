@@ -23,14 +23,13 @@ class TestGeju(unittest.TestCase):
 
     def test_hard_special_geju_cases(self):
         cases = [
-            ("归禄格", ("甲寅", "甲寅", "甲卯", "乙卯"), Geju.GUI_LU),
+            ("归禄格", ("庚申", "庚申", "庚申", "辛酉"), Geju.GUI_LU),
             ("壬骑龙背格", ("甲辰", "庚辰", "壬辰", "壬辰"), Geju.QI_QIANG_BEI),
             ("井栏叉格", ("甲子", "丙寅", "庚子", "丁卯"), Geju.JING_LAN_CHA),
             ("六甲趋干格", ("庚申", "丙子", "甲午", "乙亥"), Geju.LIU_JIA_QU_GAN),
             ("六乙鼠贵格", ("庚申", "丙子", "乙卯", "丙子"), Geju.LIU_YI_SHU_GUI),
             ("六阴朝阳格", ("庚申", "丙子", "辛巳", "丁丑"), Geju.LIU_YIN_CHAO_YANG),
             ("六壬趋艮格", ("庚申", "丙子", "壬寅", "丁卯"), Geju.LIU_REN_QU_GEN),
-            ("勾陈得位格", ("庚申", "丙子", "戊丑", "丁卯"), Geju.GOU_CHEN_DE_WEI),
             ("玄武当权格", ("庚申", "壬子", "壬午", "辛亥"), Geju.XUAN_WU_DANG_QUAN),
         ]
 
@@ -77,7 +76,7 @@ class TestGeju(unittest.TestCase):
             ("稼穑格", ("戊午", "丙辰", "己未", "戊子"), Geju.JIA_SE),
             ("润下格", ("己亥", "丙子", "壬子", "癸亥"), Geju.RUN_XIA),
             ("从革格", ("壬子", "辛酉", "辛丑", "戊寅"), Geju.CONG_GE),
-            ("从财格", ("己戌", "戊丑", "乙酉", "己戌"), Geju.CONG_CAI),
+            ("从财格", ("己丑", "戊戌", "乙酉", "己丑"), Geju.CONG_CAI),
             ("从杀格", ("壬子", "癸亥", "丙子", "壬申"), Geju.CONG_SHA),
             ("从儿格", ("丁卯", "乙未", "癸卯", "甲寅"), Geju.CONG_ER),
             ("从强格", ("辛酉", "庚申", "壬子", "辛亥"), Geju.CONG_QIANG),
@@ -111,6 +110,14 @@ class TestGeju(unittest.TestCase):
     def test_regular_real_birth_chart_is_not_forced_to_kuigang(self):
         chart = BirthChart.create(datetime.datetime(2024, 1, 1, 12, 0, 0), Gender.Male)
         self.assertNotEqual(chart.chart_analysis.geju.geju, Geju.KUIGANG)
+
+    def test_invalid_ganzhi_is_rejected_before_geju_analysis(self):
+        # The existing 勾陈得位 rule names 戊丑/戊未, neither of which is a
+        # legal day pillar. Keep chart construction honest while that rule
+        # awaits a separate correction; do not bypass the value invariant.
+        for invalid_day in ("甲卯", "戊丑", "戊未"):
+            with self.subTest(day=invalid_day), self.assertRaises(ValueError):
+                build_chart("庚申", "丙子", invalid_day, "丁卯")
 
 
 if __name__ == "__main__":

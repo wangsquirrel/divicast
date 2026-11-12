@@ -3,13 +3,14 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Literal, NamedTuple, TypedDict, cast
+from typing import Literal, TypedDict, cast
 
-from tyme4py import solar  # type: ignore
+from tyme4py import eightchar, solar  # type: ignore
 from tyme4py.eightchar.provider.impl import DefaultEightCharProvider, LunarSect2EightCharProvider
 
-from divicast.entities.ganzhi import Dizhi, SixtyJiazi, Tiangan
-
+from divicast.entities.ganzhi import Dizhi, SixtyJiazi
+from divicast.entities.pillars import FourPillars
+from divicast.entities.protocols import HasGanzhi
 
 ZiHourRule = Literal["default_next_day", "lunar_sect2_day_same"]
 
@@ -65,7 +66,7 @@ class CalendarConvention:
 
     @classmethod
     def for_provided_pillars(cls) -> CalendarConvention:
-        # A caller-supplied Bazi has no provable relationship to the displayed time.
+        # Caller-supplied pillars have no provable relationship to the displayed time.
         return cls(
             solar_terms=None,
             year_boundary=None,
@@ -84,31 +85,13 @@ def check_naive_datetime(dt: datetime) -> datetime:
     return dt
 
 
-class GanzhiPair(NamedTuple):
-    gan: Tiangan
-    zhi: Dizhi
-
-    def __str__(self) -> str:
-        return f"{self.gan}{self.zhi}"
-
-    def as_sixty_jiazi(self) -> SixtyJiazi:
-        return SixtyJiazi(self.gan, self.zhi)
-
-
-class FourPillars(NamedTuple):
-    year: GanzhiPair
-    month: GanzhiPair
-    day: GanzhiPair
-    hour: GanzhiPair
-
-    def __str__(self) -> str:
-        return f"{self.year} {self.month} {self.day} {self.hour}"
-
-
-def _from_tyme_ganzhi(value) -> GanzhiPair:
-    return GanzhiPair(
-        Tiangan[value.get_heaven_stem().get_name()],
-        Dizhi[value.get_earth_branch().get_name()],
+def four_pillars_from_tyme(eight_char: eightchar.EightChar) -> FourPillars:
+    """将已有的 Tyme 四柱转为领域值，不重新计算历法或选择流派。"""
+    return FourPillars(
+        year=SixtyJiazi.parse(eight_char.get_year().get_name()),
+        month=SixtyJiazi.parse(eight_char.get_month().get_name()),
+        day=SixtyJiazi.parse(eight_char.get_day().get_name()),
+        hour=SixtyJiazi.parse(eight_char.get_hour().get_name()),
     )
 
 
@@ -119,17 +102,9 @@ def create_four_pillars(dt: datetime, *, calc_rules: Mapping[str, str] | None = 
     provider = DefaultEightCharProvider() if rule == "default_next_day" else LunarSect2EightCharProvider()
     lunar_hour = solar.SolarTime.from_ymd_hms(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second).get_lunar_hour()
     eight_char = provider.get_eight_char(lunar_hour)
-    return FourPillars(
-        year=_from_tyme_ganzhi(eight_char.get_year()),
-        month=_from_tyme_ganzhi(eight_char.get_month()),
-        day=_from_tyme_ganzhi(eight_char.get_day()),
-        hour=_from_tyme_ganzhi(eight_char.get_hour()),
-    )
+    return four_pillars_from_tyme(eight_char)
 
 
-def create_kongwang(day_ganzhi: GanzhiPair | object) -> tuple[Dizhi, Dizhi]:
-    if isinstance(day_ganzhi, GanzhiPair):
-        return day_ganzhi.as_sixty_jiazi().get_kongwang()
-    gan = getattr(day_ganzhi, "gan")
-    zhi = getattr(day_ganzhi, "zhi")
-    return SixtyJiazi(gan, zhi).get_kongwang()
+def create_kongwang(day_ganzhi: HasGanzhi) -> tuple[Dizhi, Dizhi]:
+    """按日柱求旬空；接受任何提供天干、地支的对象。"""
+    return SixtyJiazi(day_ganzhi.gan, day_ganzhi.zhi).get_kongwang()

@@ -1,8 +1,8 @@
-from divicast.base.symbol import ValuedMultiton
+from divicast.base.symbol import MetaphysicalSymbol
 from divicast.entities.wuxing import Wuxing
 
 
-class Relative(ValuedMultiton):
+class Relative(MetaphysicalSymbol):
     """
     六亲
     """

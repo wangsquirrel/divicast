@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from enum import Enum
 
-from divicast.base.symbol import ValuedMultiton
+from divicast.base.symbol import MetaphysicalSymbol
 
 
-class Strength(ValuedMultiton):
+class Strength(MetaphysicalSymbol):
     """表示实体强弱的枚举"""
 
     VERY_WEAK = (0, "极弱")

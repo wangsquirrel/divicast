@@ -55,9 +55,11 @@ uv build # build source distribution and wheel, outputs to dist/
 ```
 src/divicast/
 ├── base/
-│   └── symbol.py         # Base ValuedMultiton class for enum-like divination symbols
+│   └── symbol.py         # MetaphysicalSymbol enum base with integer codes and Chinese names
 ├── entities/             # Core data models and logic for all divination systems
 │   ├── ganzhi.py         # Heavenly Stems (天干), Earthly Branches (地支), Ten Gods (十神), Nayin (纳音), Twelve Zhangsheng
+│   ├── pillars.py        # Shared immutable FourPillars of validated SixtyJiazi values
+│   ├── protocols.py      # Structural HasWuxing, HasYinYang and HasGanzhi capabilities
 │   ├── wuxing.py         # Five Elements (五行), YinYang
 │   ├── trigram.py        # Eight Trigrams (八卦)
 │   ├── daemon.py         # Gods/Deities (神煞)
@@ -76,16 +78,19 @@ src/divicast/
 
 ### Key Patterns
 
-- **ValuedMultiton**: Base class in `base/symbol.py` for creating enum-like divination symbols with Chinese names
+- **MetaphysicalSymbol**: Enum base in `base/symbol.py` with read-only codes and Chinese names; `next()` follows declaration order
 - **BirthChart.create()/DivinatorySymbol.create()**: Factory methods for chart assembly and analysis
-- Entity symbol classes must keep a single canonical implementation. Do not keep duplicate `ValuedMultiton` subclasses in multiple modules.
+- Entity symbol classes must keep a single canonical implementation. Do not keep duplicate `MetaphysicalSymbol` subclasses in multiple modules.
+- Use typed relationship properties (`wuxing`, `yinyang`) and structural protocols instead of a generic `belongs_to` registry.
+- Share `SixtyJiazi` and domain `FourPillars` between chart systems. Keep Pydantic output models separate from these domain values.
+- `ZhuInfo` requires a day master and computed shensha. `BirthChart(...)` and `BirthChart.create(...)` both return fully assembled and analyzed charts.
 
 - Six-line casting conversion/validation belongs to `sixline/casting.py`; CLI/MCP adapters must consume
   `StandardDivinatorySymbolOutput` directly instead of duplicating input or calendar models.
 - Preserve `cnts`/`yaogua` as legacy 0–3 codes. New input uses `line_values` or `coin_counts` with an
   explicit `coin_side`. Do not describe legacy codes as traditional text-side counts or mutate caller input.
 - `time_utils.create_four_pillars` uses validated per-call rules, defaults to 23:00 day rollover, and
-  must not consult or change Tyme's global provider. Caller-supplied Bazi must not be labeled time-derived.
+  must not consult or change Tyme's global provider. Caller-supplied FourPillars must not be labeled time-derived.
 - Keep `sixline/schema.json` synchronized with its Pydantic model and test both legacy JSON input
   and new output. Maintain the source-based 64-hexagram fixtures and 4096-cast regression in this library.
 
@@ -97,12 +102,14 @@ src/divicast/
 
 ## Key Files
 
-- `base/symbol.py`:  all divination symbols are subclasses of ValuedMultiton, which provides a way to create enum-like classes with Chinese names and values.
+- `base/symbol.py`: all divination symbols are subclasses of MetaphysicalSymbol, which provides Chinese names, integer codes and cyclic traversal.
 - `time_utils.py`: shared datetime validation, per-call calendar rules, four pillars and旬空.
 - `birth_chart/birth.py`: birth chart（八字） assembly and analysis logic,
 - `docs/bazi_module.md`: birth chart（八字） module design, capabilities, output structure, test coverage and edge cases.
 - `sixline/divinatory_symbol.py`: six-line（六爻） divination symbol generation and logic
 - `docs/sixline_module.md`: six-line divination module design, capabilities, output structure, test coverage and edge cases.
+- `docs/domain_values.md`: shared domain values, capability protocols and Python API migration.
+- `docs/known_issues.md`: confirmed existing rule defects and deferred structural work; output-equivalence tests do not establish rule correctness.
 
 
 ## Coding Style & Naming Conventions

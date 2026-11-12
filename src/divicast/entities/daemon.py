@@ -1,7 +1,7 @@
-from divicast.base.symbol import ValuedMultiton
+from divicast.base.symbol import MetaphysicalSymbol
 
 
-class Daemon(ValuedMultiton):
+class Daemon(MetaphysicalSymbol):
     """
     神煞
     """

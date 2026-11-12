@@ -16,10 +16,9 @@ from pydantic import ValidationError
 from tyme4py.lunar import LunarHour
 
 from divicast.sixline import DivinatorySymbol, plain_draw_divination, rich_draw_divination, to_standard_format
-from divicast.sixline.divinatory_symbol import create_bazi, create_line_position
+from divicast.sixline.divinatory_symbol import create_line_position
 from divicast.sixline.output import StandardDivinatorySymbolOutput, cnt_to_str
 from divicast.time_utils import create_four_pillars
-
 
 REFERENCE = json.loads((Path(__file__).parent / "fixtures/sixline_reference.json").read_text(encoding="utf-8"))
 BY_NAME = {case["name"]: case for case in REFERENCE["hexagrams"]}
@@ -277,8 +276,10 @@ class TestSixlineContract(unittest.TestCase):
                 chart(dt, cnts=[1] * 6)
 
     def test_provided_pillars_have_honest_provenance(self):
-        bazi = create_bazi(datetime(2026, 9, 16, 23), calc_rules={"zi_hour": "lunar_sect2_day_same"})
-        with patch("divicast.sixline.divinatory_symbol.create_bazi", side_effect=AssertionError("do not recalculate")):
+        bazi = create_four_pillars(datetime(2026, 9, 16, 23), calc_rules={"zi_hour": "lunar_sect2_day_same"})
+        with patch(
+            "divicast.sixline.divinatory_symbol.create_four_pillars", side_effect=AssertionError("do not recalculate")
+        ):
             # 姤 needs a hidden line, so this also checks the subsidiary palace chart.
             result = chart(cnts=[2, 1, 1, 1, 1, 1], bazi=bazi)
         self.assertEqual(result["bazi"], str(bazi))
