@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from divicast.base.symbol import ValuedMultiton
+from divicast.base.symbol import MetaphysicalSymbol
 
 
-class YinYang(ValuedMultiton):
+class YinYang(MetaphysicalSymbol):
     """阴阳"""
 
     Yin = (0, "阴")
     Yang = (1, "阳")
 
 
-class Wuxing(ValuedMultiton):
+class Wuxing(MetaphysicalSymbol):
     """五行"""
 
     Wood = (0, "木")

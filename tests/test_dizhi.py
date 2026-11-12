@@ -1,8 +1,6 @@
 import unittest
 
-from divicast.entities.ganzhi import (Canggan, CangganType, Dizhi, Nayin,
-                                      Shishen, SixtyJiazi, Tiangan,
-                                      TwelveZhangsheng)
+from divicast.entities.ganzhi import Canggan, CangganType, Dizhi, Nayin, Shishen, SixtyJiazi, Tiangan, TwelveZhangsheng
 from divicast.entities.misc import Gender
 from divicast.entities.wuxing import YinYang
 
@@ -63,16 +61,16 @@ class TestTiangan(unittest.TestCase):
                          Tiangan.Ren.get_shishen(Tiangan.Ji))
 
     def test_yinyang(self):
-        self.assertEqual(YinYang.Yang, Tiangan.Jia.belongs_to(YinYang))
-        self.assertEqual(YinYang.Yin, Tiangan.Yi.belongs_to(YinYang))
-        self.assertEqual(YinYang.Yang, Tiangan.Bing.belongs_to(YinYang))
-        self.assertEqual(YinYang.Yin, Tiangan.Ding.belongs_to(YinYang))
-        self.assertEqual(YinYang.Yang, Tiangan.Wu.belongs_to(YinYang))
-        self.assertEqual(YinYang.Yin, Tiangan.Ji.belongs_to(YinYang))
-        self.assertEqual(YinYang.Yang, Tiangan.Geng.belongs_to(YinYang))
-        self.assertEqual(YinYang.Yin, Tiangan.Xin.belongs_to(YinYang))
-        self.assertEqual(YinYang.Yang, Tiangan.Ren.belongs_to(YinYang))
-        self.assertEqual(YinYang.Yin, Tiangan.Gui.belongs_to(YinYang))
+        self.assertEqual(YinYang.Yang, Tiangan.Jia.yinyang)
+        self.assertEqual(YinYang.Yin, Tiangan.Yi.yinyang)
+        self.assertEqual(YinYang.Yang, Tiangan.Bing.yinyang)
+        self.assertEqual(YinYang.Yin, Tiangan.Ding.yinyang)
+        self.assertEqual(YinYang.Yang, Tiangan.Wu.yinyang)
+        self.assertEqual(YinYang.Yin, Tiangan.Ji.yinyang)
+        self.assertEqual(YinYang.Yang, Tiangan.Geng.yinyang)
+        self.assertEqual(YinYang.Yin, Tiangan.Xin.yinyang)
+        self.assertEqual(YinYang.Yang, Tiangan.Ren.yinyang)
+        self.assertEqual(YinYang.Yin, Tiangan.Gui.yinyang)
 
     def test_zhangsheng(self):
         self.assertEqual(TwelveZhangsheng.MuYu,
@@ -108,5 +106,5 @@ class TestTiangan(unittest.TestCase):
 
 class TestGender(unittest.TestCase):
     def test_yinyang(self):
-        self.assertEqual(YinYang.Yin, Gender.Female.belongs_to(YinYang))
-        self.assertEqual(YinYang.Yang, Gender.Male.belongs_to(YinYang))
+        self.assertEqual(YinYang.Yin, Gender.Female.yinyang)
+        self.assertEqual(YinYang.Yang, Gender.Male.yinyang)

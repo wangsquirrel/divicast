@@ -94,10 +94,13 @@ DivinatorySymbol.create(
 当前已实现：
 
 - 根据起卦时间生成年柱、月柱、日柱、时柱
-- 将四柱封装为 `Bazi`
+- 将四柱封装为共用的领域 `FourPillars`，每柱均为 `SixtyJiazi`
 - 将日柱推导为空亡
 - 将月柱地支输出为月建
 - 将日柱地支输出为日辰
+
+`DivinatorySymbol.bazi` 和显式输入 `bazi=` 使用同一个 `FourPillars` 类型，时柱字段为 `hour`。
+构造方式、历法边界及旧容器迁移见[干支与四柱领域对象](domain_values.md)。
 
 六爻模块中的八字主要用于：
 

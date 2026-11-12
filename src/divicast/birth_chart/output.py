@@ -7,10 +7,9 @@ from pydantic import BaseModel, Field, validator
 from tyme4py import sixtycycle, solar
 
 from divicast.birth_chart.analysis_models import ChartAnalysis as InternalChartAnalysis
-from divicast.time_utils import check_naive_datetime
+from divicast.time_utils import check_naive_datetime, four_pillars_from_tyme
 
 from ..entities.ganzhi import Tiangan
-from ..entities.wuxing import Wuxing, YinYang
 from .birth import BirthChart, ZhuInfo
 
 
@@ -274,22 +273,21 @@ def to_standard_format(birth_chart: BirthChart, target_dt: datetime) -> Standard
 
         # heaven stem
         hs_name = str(zhu.gan)
-        hs_element = str(zhu.gan.belongs_to(Wuxing))
-        hs_yinyang = str(zhu.gan.belongs_to(YinYang))
+        hs_element = str(zhu.gan.wuxing)
+        hs_yinyang = str(zhu.gan.yinyang)
         hs_ten = str(zhu.zhuxing)
         heavenly = HeavenStem(name=hs_name, element=hs_element, yinYang=hs_yinyang, tengod=hs_ten)
 
         # earthly branch and hidden stems
         eb_name = str(zhu.zhi)
-        eb_element = str(zhu.zhi.belongs_to(Wuxing))
-        eb_yinyang = str(zhu.zhi.belongs_to(YinYang))
+        eb_element = str(zhu.zhi.wuxing)
+        eb_yinyang = str(zhu.zhi.yinyang)
         hidden: list[HiddenStem] = []
 
         for c in zhu.canggan:
-
             name = str(c.gan)
-            element = str(c.gan.belongs_to(Wuxing))
-            yinyang = str(c.gan.belongs_to(YinYang))
+            element = str(c.gan.wuxing)
+            yinyang = str(c.gan.yinyang)
             role = str(c.canggan_type)
 
             ten = str(birth_chart.dayzhu.gan.get_shishen(c.gan))
@@ -331,8 +329,8 @@ def to_standard_format(birth_chart: BirthChart, target_dt: datetime) -> Standard
 
     natal = NatalChart(
         day_master=str(birth_chart.dayzhu.gan),
-        day_master_element=str(birth_chart.dayzhu.gan.belongs_to(Wuxing)),
-        day_master_yinyang=str(birth_chart.dayzhu.gan.belongs_to(YinYang)),
+        day_master_element=str(birth_chart.dayzhu.gan.wuxing),
+        day_master_yinyang=str(birth_chart.dayzhu.gan.yinyang),
         conception_pillar=birth_chart.taiyuan,
         fetal_breath=birth_chart.taixi,
         body_pillar=birth_chart.shengong,
@@ -355,7 +353,6 @@ def to_standard_format(birth_chart: BirthChart, target_dt: datetime) -> Standard
     direction = _get_luck_direction(child_limit)
 
     for _ in range(0, 10):
-
         pillar_name = decade.get_sixty_cycle().get_name()
         age_range = (decade.get_start_age(), decade.get_end_age())
         year_range = decade.get_start_sixty_cycle_year().get_year(), decade.get_end_sixty_cycle_year().get_year()
@@ -700,8 +697,8 @@ def _pillar_tengod_element_yinyang(
         return None, None, None
     gan = Tiangan[pillar[0]]
     tengod = str(birth_chart.dayzhu.gan.get_shishen(gan))
-    element = str(gan.belongs_to(Wuxing))
-    yinyang = str(gan.belongs_to(YinYang))
+    element = str(gan.wuxing)
+    yinyang = str(gan.yinyang)
     return tengod, element, yinyang
 
 
@@ -725,11 +722,12 @@ def _build_target_flow(birth_chart: BirthChart, target_dt: datetime) -> TargetFl
     )
     lunar_hour = solar_time.get_lunar_hour()
     eight_char = BirthChart.calc_eightchar(lunar_hour, birth_chart._calc_rules)
+    pillars = four_pillars_from_tyme(eight_char)
 
-    year_pillar = eight_char.get_year().get_name()
-    month_pillar = eight_char.get_month().get_name()
-    day_pillar = eight_char.get_day().get_name()
-    hour_pillar = eight_char.get_hour().get_name()
+    year_pillar = str(pillars.year)
+    month_pillar = str(pillars.month)
+    day_pillar = str(pillars.day)
+    hour_pillar = str(pillars.hour)
 
     year_tg, year_element, year_yinyang = _pillar_tengod_element_yinyang(birth_chart, year_pillar)
     month_tg, month_element, month_yinyang = _pillar_tengod_element_yinyang(birth_chart, month_pillar)

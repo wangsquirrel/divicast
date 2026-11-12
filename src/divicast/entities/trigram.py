@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import ClassVar, Dict, List
 
-from divicast.base.symbol import ValuedMultiton
+from divicast.base.symbol import MetaphysicalSymbol
 from divicast.entities.wuxing import Wuxing
 
 
-class Line(ValuedMultiton):
+class Line(MetaphysicalSymbol):
     """
     爻
     """
@@ -15,10 +15,11 @@ class Line(ValuedMultiton):
     YangYao = (1, "⚊")
 
 
-class Trigram(ValuedMultiton):
+class Trigram(MetaphysicalSymbol):
     """
     八卦
     """
+
     _PRIMARY_IMAGE_MAP: ClassVar[Dict[Trigram, str]]
     lines: List[Line]
 
@@ -31,14 +32,18 @@ class Trigram(ValuedMultiton):
     Xun = (6, "巽")
     Qian = (7, "乾")
 
+    @property
+    def wuxing(self) -> Wuxing:
+        """所属五行。"""
+        return _TRIGRAM_WUXING[self]
+
     def __init__(self, num: int, chinese_name: str):
         """
         :param num: 0-7
         :param chinese_name: 中文名
         """
-        ValuedMultiton.__init__(self, num, chinese_name)
-        self.lines = [Line((num >> 0) & 1), Line(
-            (num >> 1) & 1), Line((num >> 2) & 1)]
+        MetaphysicalSymbol.__init__(self, num, chinese_name)
+        self.lines = [Line((num >> 0) & 1), Line((num >> 1) & 1), Line((num >> 2) & 1)]
 
     @property
     def primary_image(self) -> str:
@@ -47,31 +52,30 @@ class Trigram(ValuedMultiton):
         """
         return self._PRIMARY_IMAGE_MAP[self]
 
-Trigram._BELONGS_TO = {
-    Wuxing: {
-        Trigram.Qian: Wuxing.Metal,
-        Trigram.Dui: Wuxing.Metal,
-        Trigram.Kan: Wuxing.Water,
-        Trigram.Gen: Wuxing.Earth,
-        Trigram.Li: Wuxing.Fire,
-        Trigram.Xun: Wuxing.Wood,
-        Trigram.Zhen: Wuxing.Wood,
-        Trigram.Kun: Wuxing.Earth,
-    }
+
+_TRIGRAM_WUXING: dict[Trigram, Wuxing] = {
+    Trigram.Qian: Wuxing.Metal,
+    Trigram.Dui: Wuxing.Metal,
+    Trigram.Kan: Wuxing.Water,
+    Trigram.Gen: Wuxing.Earth,
+    Trigram.Li: Wuxing.Fire,
+    Trigram.Xun: Wuxing.Wood,
+    Trigram.Zhen: Wuxing.Wood,
+    Trigram.Kun: Wuxing.Earth,
 }
 Trigram._PRIMARY_IMAGE_MAP = {
-    Trigram.Qian: '天',
-    Trigram.Dui: '泽',
-    Trigram.Kan: '水',
-    Trigram.Gen: '山',
-    Trigram.Li: '火',
-    Trigram.Xun: '风',
-    Trigram.Zhen: '雷',
-    Trigram.Kun: '地'
+    Trigram.Qian: "天",
+    Trigram.Dui: "泽",
+    Trigram.Kan: "水",
+    Trigram.Gen: "山",
+    Trigram.Li: "火",
+    Trigram.Xun: "风",
+    Trigram.Zhen: "雷",
+    Trigram.Kun: "地",
 }
 
 
-class Hexagram(ValuedMultiton):
+class Hexagram(MetaphysicalSymbol):
     """六十四卦"""
 
     H63 = (63, "乾")
@@ -194,10 +198,10 @@ class Hexagram(ValuedMultiton):
         """
         是否为六冲卦
         """
-        return self.inside_trigram() == self.outside_trigram() or self.chinese_name in ['无妄', '大壮']
+        return self.inside_trigram() == self.outside_trigram() or self.chinese_name in ["无妄", "大壮"]
 
     def is_liuhe(self) -> bool:
         """
         是否为六合卦
         """
-        return self.chinese_name in ['否', '困', '旅', '豫', '节', '贲', '复', '泰']
+        return self.chinese_name in ["否", "困", "旅", "豫", "节", "贲", "复", "泰"]

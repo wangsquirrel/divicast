@@ -2,26 +2,20 @@
 命盘神煞体系的实现
 """
 
-from tyme4py import enums, lunar  # type: ignore
-
 from ..entities.daemon import Daemon
 from ..entities.ganzhi import Tiangan
 from ..entities.misc import Gender
+from ..entities.pillars import FourPillars
 from ..entities.wuxing import YinYang
 
 
-def build_pillar_shensha(bazi: lunar.EightChar, gender: Gender) -> list[list[Daemon]]:
+def build_pillar_shensha(pillars: FourPillars, gender: Gender) -> list[list[Daemon]]:
     """
     神煞体系：
     - 规则参考 cantian-tymext 的 getShen 实现
     - 输出为年/月/日/时四柱的神煞列表
     """
-    ganzhi_list = [
-        bazi.get_year().get_name(),
-        bazi.get_month().get_name(),
-        bazi.get_day().get_name(),
-        bazi.get_hour().get_name(),
-    ]
+    ganzhi_list = [str(pillar) for pillar in pillars]
     year_gz, month_gz, day_gz, hour_gz = ganzhi_list
     year_gan, year_zhi = year_gz[0], year_gz[1]
     month_zhi = month_gz[1]
@@ -31,8 +25,8 @@ def build_pillar_shensha(bazi: lunar.EightChar, gender: Gender) -> list[list[Dae
     year_xun = XUN[year_gz]
     day_xun = XUN[day_gz]
     year_nayin_wuxing = NAYIN_WUXING[year_gz]
-    year_yinyang = Tiangan[year_gan].belongs_to(YinYang)
-    gender_yinyang = gender.belongs_to(YinYang)
+    year_yinyang = Tiangan[year_gan].yinyang
+    gender_yinyang = gender.yinyang
 
     gods = [set() for _ in range(4)]
 

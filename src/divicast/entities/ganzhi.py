@@ -1,13 +1,13 @@
 from __future__ import annotations  # 用于前向引用
 
-from enum import Enum
-from typing import ClassVar, Dict, List, Self
+from dataclasses import dataclass
+from typing import Self
 
-from divicast.base.symbol import ValuedMultiton
+from divicast.base.symbol import MetaphysicalSymbol
 from divicast.entities.wuxing import Wuxing, YinYang
 
 
-class Shishen(ValuedMultiton):
+class Shishen(MetaphysicalSymbol):
     """
     十神
     """
@@ -24,7 +24,7 @@ class Shishen(ValuedMultiton):
     ZhengYin = (9, "正印")
 
 
-class Tiangan(ValuedMultiton):
+class Tiangan(MetaphysicalSymbol):
     """
     天干
     """
@@ -40,45 +40,35 @@ class Tiangan(ValuedMultiton):
     Ren = (8, "壬")
     Gui = (9, "癸")
 
+    @property
+    def wuxing(self) -> Wuxing:
+        """所属五行。"""
+        return _TIANGAN_WUXING[self]
+
+    @property
+    def yinyang(self) -> YinYang:
+        """阴阳属性。"""
+        return YinYang((self.num + 1) % 2)
+
     def get_shishen(self, other: Self) -> Shishen:
         """
         获取对应的十神
         """
-        if self.belongs_to(Wuxing) == other.belongs_to(Wuxing):
+        if self.wuxing == other.wuxing:
             # 同五行
-            return (
-                Shishen.BiJian
-                if self.belongs_to(YinYang) == other.belongs_to(YinYang)
-                else Shishen.JieCai  # type: ignore
-            )
-        elif self.belongs_to(Wuxing).generate() == other.belongs_to(Wuxing):
+            return Shishen.BiJian if self.yinyang == other.yinyang else Shishen.JieCai
+        elif self.wuxing.generate() == other.wuxing:
             # 我生对方
-            return (
-                Shishen.ShiShen
-                if self.belongs_to(YinYang) == other.belongs_to(YinYang)
-                else Shishen.ShangGuan  # type: ignore
-            )
-        elif self.belongs_to(Wuxing).restrain() == other.belongs_to(Wuxing):
+            return Shishen.ShiShen if self.yinyang == other.yinyang else Shishen.ShangGuan
+        elif self.wuxing.restrain() == other.wuxing:
             # 我克对方
-            return (
-                Shishen.PianCai
-                if self.belongs_to(YinYang) == other.belongs_to(YinYang)
-                else Shishen.ZhengCai  # type: ignore
-            )
-        elif self.belongs_to(Wuxing) == other.belongs_to(Wuxing).restrain():
+            return Shishen.PianCai if self.yinyang == other.yinyang else Shishen.ZhengCai
+        elif self.wuxing == other.wuxing.restrain():
             # 对方克我
-            return (
-                Shishen.QiSha
-                if self.belongs_to(YinYang) == other.belongs_to(YinYang)
-                else Shishen.ZhengGuan  # type: ignore
-            )
-        elif self.belongs_to(Wuxing) == other.belongs_to(Wuxing).generate():
+            return Shishen.QiSha if self.yinyang == other.yinyang else Shishen.ZhengGuan
+        elif self.wuxing == other.wuxing.generate():
             # 对方生我
-            return (
-                Shishen.PianYin
-                if self.belongs_to(YinYang) == other.belongs_to(YinYang)
-                else Shishen.ZhengYin  # type: ignore
-            )
+            return Shishen.PianYin if self.yinyang == other.yinyang else Shishen.ZhengYin
         else:
             raise ValueError("无法计算对应的十神关系")
 
@@ -99,7 +89,7 @@ class Tiangan(ValuedMultiton):
             9: 3,  # 癸 in 卯
         }
         start_branch_index = CHANGSHENG_START_BRANCH[self.num]
-        if self.belongs_to(YinYang) == YinYang.Yang:
+        if self.yinyang == YinYang.Yang:
             # 阳干顺行
             changsheng_index = (zhi.num - start_branch_index + 12) % 12
         else:
@@ -109,24 +99,21 @@ class Tiangan(ValuedMultiton):
         return TwelveZhangsheng(changsheng_index)
 
 
-Tiangan._BELONGS_TO = {
-    Wuxing: {
-        Tiangan.Jia: Wuxing.Wood,
-        Tiangan.Yi: Wuxing.Wood,
-        Tiangan.Bing: Wuxing.Fire,
-        Tiangan.Ding: Wuxing.Fire,
-        Tiangan.Wu: Wuxing.Earth,
-        Tiangan.Ji: Wuxing.Earth,
-        Tiangan.Geng: Wuxing.Metal,
-        Tiangan.Xin: Wuxing.Metal,
-        Tiangan.Ren: Wuxing.Water,
-        Tiangan.Gui: Wuxing.Water,
-    },
-    YinYang: lambda x: YinYang((x.num + 1) % 2),
+_TIANGAN_WUXING: dict[Tiangan, Wuxing] = {
+    Tiangan.Jia: Wuxing.Wood,
+    Tiangan.Yi: Wuxing.Wood,
+    Tiangan.Bing: Wuxing.Fire,
+    Tiangan.Ding: Wuxing.Fire,
+    Tiangan.Wu: Wuxing.Earth,
+    Tiangan.Ji: Wuxing.Earth,
+    Tiangan.Geng: Wuxing.Metal,
+    Tiangan.Xin: Wuxing.Metal,
+    Tiangan.Ren: Wuxing.Water,
+    Tiangan.Gui: Wuxing.Water,
 }
 
 
-class CangganType(ValuedMultiton):
+class CangganType(MetaphysicalSymbol):
     """地支藏干类型"""
 
     MAIN = (0, "本气")  # 本气
@@ -134,7 +121,7 @@ class CangganType(ValuedMultiton):
     MIDDLE = (2, "中气")  # 中气
 
 
-class TwelveZhangsheng(ValuedMultiton):
+class TwelveZhangsheng(MetaphysicalSymbol):
     """
     十二长生
     """
@@ -169,7 +156,7 @@ class Canggan:
         return self.gan == other.gan and self.canggan_type == other.canggan_type
 
 
-class Dizhi(ValuedMultiton):
+class Dizhi(MetaphysicalSymbol):
     """
     地支
     """
@@ -187,6 +174,16 @@ class Dizhi(ValuedMultiton):
     Xu = (10, "戌")
     Hai = (11, "亥")
 
+    @property
+    def wuxing(self) -> Wuxing:
+        """所属五行。"""
+        return _DIZHI_WUXING[self]
+
+    @property
+    def yinyang(self) -> YinYang:
+        """阴阳属性。"""
+        return YinYang((self.num + 1) % 2)
+
     def is_chong(self, d: Dizhi) -> bool:
         """判断地支相冲"""
         return abs(self.num - d.num) == 6
@@ -203,19 +200,19 @@ class Dizhi(ValuedMultiton):
         """返回相合的地支"""
         return Dizhi((13 - self.num) % 12)
 
-    def generate(self) -> List[Dizhi]:
+    def generate(self) -> list[Dizhi]:
         r = []
-        w = self.belongs_to(Wuxing).generate()
+        w = self.wuxing.generate()
         for d in self.all():
-            if d.belongs_to(Wuxing) == w:
+            if d.wuxing == w:
                 r.append(d)
         return r
 
-    def restrain(self) -> List[Dizhi]:
+    def restrain(self) -> list[Dizhi]:
         r = []
-        w = self.belongs_to(Wuxing).restrain()
+        w = self.wuxing.restrain()
         for d in self.all():
-            if d.belongs_to(Wuxing) == w:
+            if d.wuxing == w:
                 r.append(d)
         return r
 
@@ -237,9 +234,9 @@ class Dizhi(ValuedMultiton):
         ]
         return zodiacs[self.num]
 
-    def canggan(self) -> List[Canggan]:
-        """地址藏干"""
-        canggan_map: dict[Dizhi, List[Canggan]] = {
+    def canggan(self) -> list[Canggan]:
+        """地支藏干"""
+        canggan_map: dict[Dizhi, list[Canggan]] = {
             Dizhi.Zi: [Canggan(Tiangan.Gui, CangganType.MAIN)],
             Dizhi.Chou: [
                 Canggan(Tiangan.Ji, CangganType.MAIN),
@@ -284,32 +281,56 @@ class Dizhi(ValuedMultiton):
         return canggan_map[self]
 
 
-Dizhi._BELONGS_TO = {
-    Wuxing: {
-        Dizhi.Zi: Wuxing.Water,
-        Dizhi.Chou: Wuxing.Earth,
-        Dizhi.Yin: Wuxing.Wood,
-        Dizhi.Mou: Wuxing.Wood,
-        Dizhi.Chen: Wuxing.Earth,
-        Dizhi.Si: Wuxing.Fire,
-        Dizhi.Wu: Wuxing.Fire,
-        Dizhi.Wei: Wuxing.Earth,
-        Dizhi.Shen: Wuxing.Metal,
-        Dizhi.You: Wuxing.Metal,
-        Dizhi.Xu: Wuxing.Earth,
-        Dizhi.Hai: Wuxing.Water,
-    },
-    YinYang: lambda x: YinYang((x.num + 1) % 2),
+_DIZHI_WUXING: dict[Dizhi, Wuxing] = {
+    Dizhi.Zi: Wuxing.Water,
+    Dizhi.Chou: Wuxing.Earth,
+    Dizhi.Yin: Wuxing.Wood,
+    Dizhi.Mou: Wuxing.Wood,
+    Dizhi.Chen: Wuxing.Earth,
+    Dizhi.Si: Wuxing.Fire,
+    Dizhi.Wu: Wuxing.Fire,
+    Dizhi.Wei: Wuxing.Earth,
+    Dizhi.Shen: Wuxing.Metal,
+    Dizhi.You: Wuxing.Metal,
+    Dizhi.Xu: Wuxing.Earth,
+    Dizhi.Hai: Wuxing.Water,
 }
 
 
+@dataclass(frozen=True, slots=True)
 class SixtyJiazi:
+    """六十甲子中的一个不可变干支值，仅允许阴阳相配的天干和地支。
+
+    使用 ``SixtyJiazi(gan, zhi)`` 从领域符号构造，或使用 ``parse("甲子")``
+    严格解析两个汉字。相同天干、地支的值相等，并可作为字典键。
+    """
+
     gan: Tiangan
     zhi: Dizhi
 
-    def __init__(self, gan: Tiangan, zhi: Dizhi):
-        self.gan = gan
-        self.zhi = zhi
+    def __post_init__(self) -> None:
+        if not isinstance(self.gan, Tiangan):
+            raise TypeError("gan must be a Tiangan")
+        if not isinstance(self.zhi, Dizhi):
+            raise TypeError("zhi must be a Dizhi")
+        if self.gan.yinyang != self.zhi.yinyang:
+            raise ValueError(f"{self.gan}{self.zhi} is not a valid sixty-jiazi pair: yin/yang must match")
+
+    @classmethod
+    def parse(cls, text: str) -> Self:
+        """解析恰好两个汉字的合法干支，不截断、去空格或隐式转换类型。"""
+        if not isinstance(text, str):
+            raise TypeError("ganzhi text must be a string")
+        if len(text) != 2:
+            raise ValueError("ganzhi text must contain exactly one heavenly stem and one earthly branch")
+        try:
+            gan, zhi = Tiangan[text[0]], Dizhi[text[1]]
+        except KeyError as exc:
+            raise ValueError(f"{text!r} is not a recognized ganzhi") from exc
+        return cls(gan, zhi)
+
+    def __str__(self) -> str:
+        return f"{self.gan}{self.zhi}"
 
     def get_nayin(self) -> Nayin:
         index = ((6 - ((self.zhi.num - self.gan.num) % 12) // 2) * 10 + self.gan.num) % 60
@@ -322,7 +343,7 @@ class SixtyJiazi:
         )
 
 
-class Nayin(ValuedMultiton):
+class Nayin(MetaphysicalSymbol):
     """
     纳音
     """
@@ -358,38 +379,41 @@ class Nayin(ValuedMultiton):
     ShiLiuMu = (28, "石榴木")
     DaHaiShui = (29, "大海水")
 
+    @property
+    def wuxing(self) -> Wuxing:
+        """所属五行。"""
+        return _NAYIN_WUXING[self]
 
-Nayin._BELONGS_TO = {
-    Wuxing: {
-        Nayin.HaiZhongJin: Wuxing.Metal,
-        Nayin.LuZhongHuo: Wuxing.Fire,
-        Nayin.DaLinMu: Wuxing.Wood,
-        Nayin.LuPangTu: Wuxing.Earth,
-        Nayin.JianFengjin: Wuxing.Metal,
-        Nayin.ShanTouHuo: Wuxing.Fire,
-        Nayin.DongXiaShui: Wuxing.Water,
-        Nayin.ChengQiangTu: Wuxing.Earth,
-        Nayin.BaiLajin: Wuxing.Metal,
-        Nayin.YangLiuMu: Wuxing.Wood,
-        Nayin.QuanZhongShui: Wuxing.Water,
-        Nayin.WuShangTu: Wuxing.Earth,
-        Nayin.PiLiHuo: Wuxing.Fire,
-        Nayin.SongBaiMu: Wuxing.Wood,
-        Nayin.ChangLiuShui: Wuxing.Water,
-        Nayin.ShaZhongJin: Wuxing.Metal,
-        Nayin.ShanXiaHuo: Wuxing.Fire,
-        Nayin.PingDiMu: Wuxing.Wood,
-        Nayin.BiShanTu: Wuxing.Earth,
-        Nayin.JinBoJin: Wuxing.Metal,
-        Nayin.FoDengHuo: Wuxing.Fire,
-        Nayin.TianHeShui: Wuxing.Water,
-        Nayin.DaYiTu: Wuxing.Earth,
-        Nayin.ChaiShanJin: Wuxing.Metal,
-        Nayin.SangSongMu: Wuxing.Wood,
-        Nayin.DaXiShui: Wuxing.Water,
-        Nayin.ShaZhongTu: Wuxing.Earth,
-        Nayin.TianShangHuo: Wuxing.Fire,
-        Nayin.ShiLiuMu: Wuxing.Wood,
-        Nayin.DaHaiShui: Wuxing.Water,
-    }
+
+_NAYIN_WUXING: dict[Nayin, Wuxing] = {
+    Nayin.HaiZhongJin: Wuxing.Metal,
+    Nayin.LuZhongHuo: Wuxing.Fire,
+    Nayin.DaLinMu: Wuxing.Wood,
+    Nayin.LuPangTu: Wuxing.Earth,
+    Nayin.JianFengjin: Wuxing.Metal,
+    Nayin.ShanTouHuo: Wuxing.Fire,
+    Nayin.DongXiaShui: Wuxing.Water,
+    Nayin.ChengQiangTu: Wuxing.Earth,
+    Nayin.BaiLajin: Wuxing.Metal,
+    Nayin.YangLiuMu: Wuxing.Wood,
+    Nayin.QuanZhongShui: Wuxing.Water,
+    Nayin.WuShangTu: Wuxing.Earth,
+    Nayin.PiLiHuo: Wuxing.Fire,
+    Nayin.SongBaiMu: Wuxing.Wood,
+    Nayin.ChangLiuShui: Wuxing.Water,
+    Nayin.ShaZhongJin: Wuxing.Metal,
+    Nayin.ShanXiaHuo: Wuxing.Fire,
+    Nayin.PingDiMu: Wuxing.Wood,
+    Nayin.BiShanTu: Wuxing.Earth,
+    Nayin.JinBoJin: Wuxing.Metal,
+    Nayin.FoDengHuo: Wuxing.Fire,
+    Nayin.TianHeShui: Wuxing.Water,
+    Nayin.DaYiTu: Wuxing.Earth,
+    Nayin.ChaiShanJin: Wuxing.Metal,
+    Nayin.SangSongMu: Wuxing.Wood,
+    Nayin.DaXiShui: Wuxing.Water,
+    Nayin.ShaZhongTu: Wuxing.Earth,
+    Nayin.TianShangHuo: Wuxing.Fire,
+    Nayin.ShiLiuMu: Wuxing.Wood,
+    Nayin.DaHaiShui: Wuxing.Water,
 }

@@ -1,47 +1,18 @@
-from __future__ import annotations
-
 import unittest
 
-from tyme4py import AbstractTyme, eightchar, enums, lunar, sixtycycle, solar  # type: ignore
+from tyme4py import solar
 
-from divicast.base.symbol import ValuedMultiton
-
-
-class YinYang(ValuedMultiton):
-    """
-    阴阳
-    """
-
-    Yin = (0, "阴")
-    Yang = (1, "阳")
-
-
-class GenderExample(ValuedMultiton):
-    """
-    性别
-    """
-
-    Female = (0, "女")
-    Male = (1, "男")
-
-
-GenderExample._BELONGS_TO = {YinYang: {GenderExample.Male: YinYang.Yang, GenderExample.Female: YinYang.Yin}}
-
-
-class EOrI(ValuedMultiton):
-    E = (0, "E")
-    I = (1, "I")
-
-
-EOrI._BELONGS_TO = {YinYang: lambda x: YinYang(x.num % 2)}
+from divicast.entities.ganzhi import Dizhi, Tiangan
+from divicast.entities.misc import Gender
+from divicast.entities.wuxing import YinYang
 
 
 class TestMix(unittest.TestCase):
-    def test_mix(self):
-        self.assertEqual(GenderExample.Male.belongs_to(YinYang), YinYang.Yang)
-        self.assertEqual(GenderExample.Female.belongs_to(YinYang), YinYang.Yin)
-        self.assertEqual(EOrI.E.belongs_to(YinYang), YinYang.Yin)
-        self.assertEqual(EOrI.I.belongs_to(YinYang), YinYang.Yang)
+    def test_symbols_expose_their_own_yinyang_property(self):
+        self.assertIs(Gender.Male.yinyang, YinYang.Yang)
+        self.assertIs(Gender.Female.yinyang, YinYang.Yin)
+        self.assertIs(Tiangan.Jia.yinyang, YinYang.Yang)
+        self.assertIs(Dizhi.Chou.yinyang, YinYang.Yin)
 
 
 class TestExtractLunar(unittest.TestCase):

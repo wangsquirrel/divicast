@@ -33,6 +33,7 @@
 相关基础实体位于：
 
 - `src/divicast/entities/ganzhi.py`
+- `src/divicast/entities/pillars.py`
 - `src/divicast/entities/wuxing.py`
 - `src/divicast/entities/daemon.py`
 - `src/divicast/entities/misc.py`
@@ -47,6 +48,10 @@
 ```python
 BirthChart.create(dt, gender, calc_rules=None)
 ```
+
+直接调用 `BirthChart(dt, gender, calc_rules=None)` 与上述入口等价，均在返回前
+完成盘面装配和分析，可立即传给 `to_standard_format()`。
+调用方无需再调用 `assemble()`、`analyze()`。
 
 已经实现：
 
@@ -63,7 +68,13 @@ BirthChart.create(dt, gender, calc_rules=None)
 
 ### 2. 四柱基础盘面
 
-四柱对象 `ZhuInfo` 当前已实现以下信息：
+`BirthChart.pillars` 使用六爻与八字共用的不可变 `FourPillars`，每柱都是 `SixtyJiazi`。
+各柱的 `ZhuInfo` 引用相应干支，提供命盘上下文信息。
+`ZhuInfo` 构造时要求提供日主天干和已计算的神煞，自动填充十神、藏干与十二长生，
+不再依赖命盘创建之后的补充赋值。
+构造方式、历法边界及 Python API 迁移见[干支与四柱领域对象](domain_values.md)。
+
+单柱对象 `ZhuInfo` 当前已实现以下信息：
 
 - 天干
 - 地支
@@ -110,7 +121,7 @@ BirthChart.create(dt, gender, calc_rules=None)
 实现特点：
 
 - 神煞规则集中在 `birth_chart/daemon.py`
-- 输出结果按四柱分别附着到 `ZhuInfo.daemon`
+- 输出结果按四柱分别附着到 `ZhuInfo.shensha`
 - 标准输出中提供柱级神煞和全盘汇总神煞
 
 当前八字排盘已接入输出的神煞清单：

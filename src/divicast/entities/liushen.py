@@ -1,7 +1,7 @@
-from divicast.base.symbol import ValuedMultiton
+from divicast.base.symbol import MetaphysicalSymbol
 
 
-class Liushen(ValuedMultiton):
+class Liushen(MetaphysicalSymbol):
     """
     六神
     """
